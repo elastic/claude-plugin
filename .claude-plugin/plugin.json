@@ -1,0 +1,22 @@
+{
+  "version": "0.1.0",
+  "name": "elastic",
+  "description": "Elastic plugin for Claude Code — skills, agents, and tools for building with the Elastic stack.",
+  "author": {
+    "name": "Elastic",
+    "url": "https://www.elastic.co"
+  },
+  "repository": "https://github.com/elastic/claude-plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "elasticsearch",
+    "esql",
+    "search",
+    "ingest",
+    "security",
+    "elastic"
+  ],
+  "skills": [
+    "./skills/"
+  ]
+}

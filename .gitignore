@@ -1,0 +1,9 @@
+# jetbrains
+*.iml
+.idea
+
+# OS
+.DS_Store
+
+# Node (for skills with dependencies)
+node_modules/
