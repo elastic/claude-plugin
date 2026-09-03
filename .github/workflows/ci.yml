@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Plugin Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin
+        run: claude plugin validate --strict .
