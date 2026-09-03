@@ -1,0 +1,92 @@
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  ensure-changelog:
+    name: Ensure Changelog Entry
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if CHANGELOG.md was modified
+        id: check
+        run: |
+          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- CHANGELOG.md)
+          if [ -n "$changed" ]; then
+            echo "modified=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "modified=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add placeholder changelog entry
+        if: steps.check.outputs.modified == 'false'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, re
+
+          title = os.environ["PR_TITLE"]
+          number = os.environ["PR_NUMBER"]
+          entry = f"- {title} (#{number})"
+
+          with open("CHANGELOG.md", "r") as f:
+              content = f.read()
+
+          if "## [Unreleased]" in content:
+              # Find the [Unreleased] section
+              unreleased_match = re.search(r"(## \[Unreleased\].*?\n)", content)
+              insert_pos = unreleased_match.end()
+
+              # Check if there's already a ### Added subsection before the next ## section
+              rest = content[insert_pos:]
+              next_section = re.search(r"\n## \[", rest)
+              unreleased_block = rest[:next_section.start()] if next_section else rest
+
+              if "### Added" in unreleased_block:
+                  # Insert after "### Added\n\n"
+                  added_offset = unreleased_block.index("### Added")
+                  abs_pos = insert_pos + added_offset + len("### Added")
+                  # Skip past the newline(s) after ### Added
+                  while abs_pos < len(content) and content[abs_pos] == "\n":
+                      abs_pos += 1
+                  content = content[:abs_pos] + entry + "\n" + content[abs_pos:]
+              else:
+                  # Add a ### Added section
+                  content = content[:insert_pos] + f"\n### Added\n\n{entry}\n" + content[insert_pos:]
+          else:
+              # No [Unreleased] section — add one after the # Changelog header
+              header_match = re.search(r"(# Changelog.*?\n)", content)
+              if header_match:
+                  insert_pos = header_match.end()
+                  content = content[:insert_pos] + f"\n## [Unreleased]\n\n### Added\n\n{entry}\n" + content[insert_pos:]
+              else:
+                  content = f"# Changelog\n\n## [Unreleased]\n\n### Added\n\n{entry}\n\n" + content
+
+          with open("CHANGELOG.md", "w") as f:
+              f.write(content)
+          PYEOF
+
+      - name: Commit and push changelog update
+        if: steps.check.outputs.modified == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: add changelog entry for PR #${{ github.event.pull_request.number }}"
+          git push
