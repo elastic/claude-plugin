@@ -1,7 +1,7 @@
 {
   "name": "elastic",
   "version": "0.0.1",
-  "description": "Elastic skills — Elasticsearch, Kibana, Observability, Security, and Cloud",
+  "description": "Elastic plugin for Claude — skills for building with the Elastic stack.",
   "author": {
     "name": "Elastic",
     "url": "https://www.elastic.co"
