@@ -1,22 +1,24 @@
 {
-  "version": "0.0.1",
   "name": "elastic",
-  "description": "Elastic plugin for Claude Code — skills, agents, and tools for building with the Elastic stack.",
+  "version": "0.0.1",
+  "description": "Elastic skills — Elasticsearch, Kibana, Observability, Security, and Cloud",
   "author": {
     "name": "Elastic",
     "url": "https://www.elastic.co"
   },
+  "homepage": "https://github.com/elastic/claude-plugin",
   "repository": "https://github.com/elastic/claude-plugin",
   "license": "Apache-2.0",
   "keywords": [
+    "elastic",
     "elasticsearch",
+    "kibana",
+    "observability",
+    "security",
+    "cloud",
     "esql",
     "search",
-    "ingest",
-    "security",
-    "elastic"
+    "ingest"
   ],
-  "skills": [
-    "./skills/"
-  ]
+  "skills": []
 }
