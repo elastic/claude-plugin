@@ -1,6 +1,4 @@
-# elastic
-
-Elastic plugin for Claude Code.
+# Elastic's official Claude plugin
 
 ## Structure
 
@@ -16,7 +14,3 @@ Load locally during development:
 ```sh
 claude --plugin-dir /path/to/claude-plugin
 ```
-
-## License
-
-Elastic-2.0
