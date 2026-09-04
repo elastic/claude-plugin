@@ -19,7 +19,7 @@ if [ -d "skills" ]; then
   skills_json=$(find skills -name SKILL.md -print0 | \
     xargs -0 -I{} dirname {} | \
     sort | \
-    jq -R -s 'split("\n") | map(select(length > 0))')
+    jq -R -s '[split("\n")[] | select(length > 0) | "./" + .]')
 else
   skills_json="[]"
 fi
