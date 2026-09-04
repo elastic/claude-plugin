@@ -1,0 +1,44 @@
+name: Generate skills list
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "skills/**"
+      - ".claude-plugin/plugin.json"
+      - "scripts/generate-skills-list.sh"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    name: Update plugin.json skills array
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate skills list
+        run: bash scripts/generate-skills-list.sh
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet .claude-plugin/plugin.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated plugin.json
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/plugin.json
+          git commit -m "chore: regenerate plugin.json skills list"
+          git push
