@@ -20,5 +20,32 @@
     "search",
     "ingest"
   ],
-  "skills": []
+  "skills": [
+    "./skills/cloud/onboarding",
+    "./skills/cloud/provisioning",
+    "./skills/elasticsearch/elasticsearch-anomaly-detection",
+    "./skills/elasticsearch/elasticsearch-anomaly-detection-explainer",
+    "./skills/elasticsearch/elasticsearch-cluster-health",
+    "./skills/elasticsearch/elasticsearch-esql",
+    "./skills/elasticsearch/elasticsearch-index-design",
+    "./skills/elasticsearch/elasticsearch-ingest",
+    "./skills/elasticsearch/elasticsearch-onboarding",
+    "./skills/elasticsearch/elasticsearch-query-optimization",
+    "./skills/elasticsearch/elasticsearch-reindex",
+    "./skills/elasticsearch/elasticsearch-search-relevance",
+    "./skills/kibana/kibana-agent-builder",
+    "./skills/kibana/kibana-alerting-rules",
+    "./skills/kibana/kibana-anomaly-detection",
+    "./skills/kibana/kibana-dashboards",
+    "./skills/kibana/kibana-workflows",
+    "./skills/observability/k8s-investigation",
+    "./skills/observability/llm-obs",
+    "./skills/observability/onboarding",
+    "./skills/observability/service-reliability",
+    "./skills/observability/sre-triage",
+    "./skills/security/alert-triage",
+    "./skills/security/case-management",
+    "./skills/security/detection-rule-management",
+    "./skills/security/generate-security-sample-data"
+  ]
 }
