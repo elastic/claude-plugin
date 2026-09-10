@@ -5,5 +5,5 @@
 # OS
 .DS_Store
 
-# Node (for skills with dependencies)
+# Node
 node_modules/
