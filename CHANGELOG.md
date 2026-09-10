@@ -4,6 +4,8 @@ All notable changes to this plugin are documented here.
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-09-10
+
 ### Added
 
 - Add TypeScript testing, linting, and formatting infrastructure (#3)
