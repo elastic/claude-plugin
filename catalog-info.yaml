@@ -6,9 +6,9 @@ metadata:
   name: claude-plugin
   description: "Elastic's official Claude Code plugin — skills, hooks, and agents for the Elastic stack"
   annotations:
-    backstage.io/source-location: "url:https://github.com/elastic/claude-plugin/"
-    github.com/project-slug: "elastic/claude-plugin"
-    github.com/team-slug: "elastic/search-eng"
+    backstage.io/source-location: 'url:https://github.com/elastic/claude-plugin/'
+    github.com/project-slug: 'elastic/claude-plugin'
+    github.com/team-slug: 'elastic/search-eng'
   tags:
     - javascript
 spec:
