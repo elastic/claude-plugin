@@ -29,9 +29,13 @@ jobs:
           pr_number="${{ github.event.pull_request.number }}"
           commit_msg="chore: add changelog entry for PR #${pr_number}"
 
-          # Find and revert any bot-authored changelog commits for this PR
+          # Find bot-authored changelog commits for this PR that haven't been reverted yet
           reverted=false
           for sha in $(git log --reverse --format='%H' origin/${{ github.base_ref }}..HEAD --grep="$commit_msg" --author="github-actions\[bot\]"); do
+            # Skip if a revert of this commit already exists
+            if git log --format='%s' origin/${{ github.base_ref }}..HEAD | grep -qF "Revert \"$commit_msg\""; then
+              continue
+            fi
             git revert --no-edit "$sha"
             reverted=true
           done
