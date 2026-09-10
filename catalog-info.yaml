@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/catalog-info.json
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: claude-plugin
+  description: "Elastic's official Claude Code plugin — skills, hooks, and agents for the Elastic stack"
+  annotations:
+    backstage.io/source-location: "url:https://github.com/elastic/claude-plugin/"
+    github.com/project-slug: "elastic/claude-plugin"
+    github.com/team-slug: "elastic/search-eng"
+  tags:
+    - javascript
+spec:
+  type: other
+  lifecycle: experimental
+  owner: group:search-eng
