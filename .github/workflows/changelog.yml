@@ -10,6 +10,36 @@ permissions:
   pull-requests: read
 
 jobs:
+  revert-changelog:
+    name: Revert Changelog Entry
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Revert bot changelog commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          pr_number="${{ github.event.pull_request.number }}"
+          commit_msg="chore: add changelog entry for PR #${pr_number}"
+
+          # Find and revert any bot-authored changelog commits for this PR
+          reverted=false
+          for sha in $(git log --reverse --format='%H' origin/${{ github.base_ref }}..HEAD --grep="$commit_msg" --author="github-actions\[bot\]"); do
+            git revert --no-edit "$sha"
+            reverted=true
+          done
+
+          if [ "$reverted" = true ]; then
+            git push
+          fi
+
   ensure-changelog:
     name: Ensure Changelog Entry
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
