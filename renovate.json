@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["local>elastic/renovate-config"],
+  "labels": ["skip-changelog"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "automerge": true
+    }
+  ]
+}
