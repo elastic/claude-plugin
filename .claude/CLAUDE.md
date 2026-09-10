@@ -49,16 +49,17 @@ Assisted-by: Claude Code <noreply@anthropic.com>
 
 ## CI / GitHub Actions
 
-Four workflows, all triggered on PRs to `main`:
+Five workflows:
 
 1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push, PR, and daily cron.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
-4. **Release** (`release.yml`) — on merge to `main`, if the version in `plugin.json` changed: stamps the changelog, creates a git tag (`{name}--v{version}`), and publishes a GitHub Release.
+4. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), bumps `plugin.json`, stamps the changelog, and opens a PR with `skip-changelog`.
+5. **Tag Release** (`release-tag.yml`) — fires on push to `main` when `plugin.json` changes. Creates the git tag (`{name}--v{version}`) and GitHub Release after the release PR merges.
 
 ## Versioning and releases
 
-Bump `.claude-plugin/plugin.json` `version` to trigger a release. The release workflow handles tagging and GitHub Release creation. Tag format: `elastic--v{version}`.
+Releases are triggered manually via the Release workflow (`Actions` → `Release` → `Run workflow`). Provide the target version (e.g. `0.1.0`). The workflow validates the version, bumps `plugin.json`, stamps the changelog, and opens a PR. Once the PR merges, the Tag Release workflow automatically creates the tag and GitHub Release. Do not manually bump `plugin.json` `version` — the workflow owns that. Tag format: `elastic--v{version}`.
 
 ## Skill anatomy
 

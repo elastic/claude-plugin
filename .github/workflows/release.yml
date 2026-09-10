@@ -1,17 +1,20 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.claude-plugin/plugin.json'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (semver, e.g. 0.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  release:
-    name: Tag and Release
+  release-pr:
+    name: Create Release PR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,40 +25,81 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Validate version input
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ! echo "$INPUT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$INPUT_VERSION' is not valid semver (expected X.Y.Z)"
+            exit 1
+          fi
+
+      - name: Check version is a logical bump
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          current=$(jq -r '.version' .claude-plugin/plugin.json)
+          echo "Current version: $current"
+          echo "Target version:  $INPUT_VERSION"
+
+          IFS='.' read -r cur_major cur_minor cur_patch <<< "$current"
+          IFS='.' read -r new_major new_minor new_patch <<< "$INPUT_VERSION"
+
+          valid=false
+
+          # Major bump: X+1.0.0
+          if [ "$new_major" -eq $((cur_major + 1)) ] && [ "$new_minor" -eq 0 ] && [ "$new_patch" -eq 0 ]; then
+            valid=true
+          fi
+
+          # Minor bump: X.Y+1.0
+          if [ "$new_major" -eq "$cur_major" ] && [ "$new_minor" -eq $((cur_minor + 1)) ] && [ "$new_patch" -eq 0 ]; then
+            valid=true
+          fi
+
+          # Patch bump: X.Y.Z+1
+          if [ "$new_major" -eq "$cur_major" ] && [ "$new_minor" -eq "$cur_minor" ] && [ "$new_patch" -eq $((cur_patch + 1)) ]; then
+            valid=true
+          fi
+
+          if [ "$valid" != "true" ]; then
+            echo "::error::Version '$INPUT_VERSION' is not a single logical bump from '$current'. Expected one of: $cur_major.$cur_minor.$((cur_patch + 1)), $cur_major.$((cur_minor + 1)).0, or $((cur_major + 1)).0.0"
+            exit 1
+          fi
+
+      - name: Check tag does not already exist
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          name=$(jq -r '.name' .claude-plugin/plugin.json)
+          tag="${name}--v${INPUT_VERSION}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "::error::Tag '$tag' already exists"
+            exit 1
+          fi
+
+      - name: Bump version in plugin.json
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          jq --arg v "$INPUT_VERSION" '.version = $v' .claude-plugin/plugin.json > tmp.json
+          mv tmp.json .claude-plugin/plugin.json
+
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Validate plugin
         run: claude plugin validate --strict .
 
-      - name: Extract version
-        id: version
-        run: |
-          version=$(jq -r '.version' .claude-plugin/plugin.json)
-          name=$(jq -r '.name' .claude-plugin/plugin.json)
-          tag="${name}--v${version}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-
-      - name: Check if tag already exists
-        id: tag-check
-        run: |
-          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Stamp changelog and push
-        if: steps.tag-check.outputs.exists == 'false'
+      - name: Stamp changelog
         env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           python3 - <<'PYEOF'
           import os, re
           from datetime import date
 
-          version = os.environ["RELEASE_VERSION"]
+          version = os.environ["INPUT_VERSION"]
           today = date.today().isoformat()
 
           with open("CHANGELOG.md", "r") as f:
@@ -74,28 +118,22 @@ jobs:
               f.write(content)
           PYEOF
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --staged --quiet || git commit -m "chore: stamp changelog for v${RELEASE_VERSION}"
-          git push
-
-      - name: Create git tag
-        if: steps.tag-check.outputs.exists == 'false'
-        run: |
-          tag="${{ steps.version.outputs.tag }}"
-          git tag -a "$tag" -m "Release $tag"
-          git push origin "$tag"
-
-      - name: Create GitHub Release
-        if: steps.tag-check.outputs.exists == 'false'
+      - name: Create release branch and PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          tag="${{ steps.version.outputs.tag }}"
-          version="${{ steps.version.outputs.version }}"
+          branch="release/v${INPUT_VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add .claude-plugin/plugin.json CHANGELOG.md
+          git commit -m "release: v${INPUT_VERSION}"
+          git push origin "$branch"
 
-          gh release create "$tag" \
-            --verify-tag \
-            --title "v${version}" \
-            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "release: v${INPUT_VERSION}" \
+            --body "Automated release PR for v${INPUT_VERSION}." \
+            --label "skip-changelog"

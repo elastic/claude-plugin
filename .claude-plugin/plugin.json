@@ -1,6 +1,6 @@
 {
   "name": "elastic",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Elastic plugin for Claude — skills for building with the Elastic stack.",
   "author": {
     "name": "Elastic",
