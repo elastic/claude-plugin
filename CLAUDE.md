@@ -20,8 +20,17 @@ Elastic's official Claude Code plugin (`elastic/claude-plugin`). It bundles skil
 ## Commands
 
 ```sh
+# Install dependencies
+npm install
+
 # Validate the plugin (same check CI runs)
 claude plugin validate --strict .
+
+# Run tests
+npm test
+
+# Run linter
+npm run lint
 
 # Regenerate the skills list in plugin.json after adding/removing skills
 bash scripts/generate-skills-list.sh
@@ -30,11 +39,19 @@ bash scripts/generate-skills-list.sh
 claude --plugin-dir /path/to/claude-plugin
 ```
 
+## Commit attribution
+
+Use `Assisted-by:` trailers (not `Co-Authored-By:`) for AI-assisted commits, following the Linux kernel convention adopted at Elastic:
+
+```
+Assisted-by: Claude Code <noreply@anthropic.com>
+```
+
 ## CI / GitHub Actions
 
 Four workflows, all triggered on PRs to `main`:
 
-1. **CI** (`ci.yml`) — runs `claude plugin validate --strict .` on push, PR, and daily cron.
+1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`vitest`) on push, PR, and daily cron.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
 4. **Release** (`release.yml`) — on merge to `main`, if the version in `plugin.json` changed: stamps the changelog, creates a git tag (`{name}--v{version}`), and publishes a GitHub Release.
@@ -46,6 +63,7 @@ Bump `.claude-plugin/plugin.json` `version` to trigger a release. The release wo
 ## Skill anatomy
 
 Each skill is a directory under `skills/<domain>/` containing at minimum a `SKILL.md` with YAML frontmatter (`name`, `description`, `metadata`, optionally `compatibility`). Skills may also include:
+
 - `references/*.md` — domain knowledge the skill loads on demand
 - `scripts/*.js` — executable helpers (Node.js 22+, some require env vars for cluster access)
 - `assets/*.json` — template payloads (e.g., Kibana dashboard JSON)

@@ -1,0 +1,21 @@
+{
+  "name": "@elastic/claude-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@jest/globals": "^30.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.28.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.5.0",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.33.0"
+  }
+}

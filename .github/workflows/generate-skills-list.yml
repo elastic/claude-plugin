@@ -4,9 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "skills/**"
-      - ".claude-plugin/plugin.json"
-      - "scripts/generate-skills-list.sh"
+      - 'skills/**'
+      - '.claude-plugin/plugin.json'
+      - 'scripts/generate-skills-list.sh'
 
 permissions:
   contents: write
