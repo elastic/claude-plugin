@@ -10,6 +10,40 @@ permissions:
   pull-requests: read
 
 jobs:
+  revert-changelog:
+    name: Revert Changelog Entry
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Revert bot changelog commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          pr_number="${{ github.event.pull_request.number }}"
+          commit_msg="chore: add changelog entry for PR #${pr_number}"
+
+          # Find bot-authored changelog commits for this PR that haven't been reverted yet
+          reverted=false
+          for sha in $(git log --reverse --format='%H' origin/${{ github.base_ref }}..HEAD --grep="$commit_msg" --author="github-actions\[bot\]"); do
+            # Skip if a revert of this commit already exists
+            if git log --format='%s' origin/${{ github.base_ref }}..HEAD | grep -qF "Revert \"$commit_msg\""; then
+              continue
+            fi
+            git revert --no-edit "$sha"
+            reverted=true
+          done
+
+          if [ "$reverted" = true ]; then
+            git push
+          fi
+
   ensure-changelog:
     name: Ensure Changelog Entry
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
@@ -31,6 +65,20 @@ jobs:
             echo "modified=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check if plugin-relevant files changed
+        id: plugin
+        run: |
+          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
+            '.claude-plugin/plugin.json' \
+            'skills/**' \
+            'hooks/**' \
+            'agents/**')
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Detect skill changes
         id: skills
         run: |
@@ -42,7 +90,7 @@ jobs:
           echo "removed=$removed" >> "$GITHUB_OUTPUT"
 
       - name: Add changelog entry
-        if: steps.check.outputs.modified == 'false'
+        if: steps.check.outputs.modified == 'false' && steps.plugin.outputs.changed == 'true'
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -96,7 +144,7 @@ jobs:
           PYEOF
 
       - name: Commit and push changelog update
-        if: steps.check.outputs.modified == 'false'
+        if: steps.check.outputs.modified == 'false' && steps.plugin.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
