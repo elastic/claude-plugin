@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test": "node --experimental-vm-modules --no-warnings node_modules/.bin/jest",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."
   },

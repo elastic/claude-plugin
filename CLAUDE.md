@@ -51,7 +51,7 @@ Assisted-by: Claude Code <noreply@anthropic.com>
 
 Four workflows, all triggered on PRs to `main`:
 
-1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`vitest`) on push, PR, and daily cron.
+1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push, PR, and daily cron.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
 4. **Release** (`release.yml`) — on merge to `main`, if the version in `plugin.json` changed: stamps the changelog, creates a git tag (`{name}--v{version}`), and publishes a GitHub Release.

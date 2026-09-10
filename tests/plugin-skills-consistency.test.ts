@@ -1,6 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from '@jest/globals';
 
@@ -17,16 +16,17 @@ function readPluginJson(): PluginJson {
 }
 
 function findSkillDirsOnDisk(): string[] {
-  const output = execSync('find skills -name SKILL.md', {
-    cwd: ROOT,
-    encoding: 'utf-8',
-  });
-  return output
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((skillMdPath) => './' + skillMdPath.replace('/SKILL.md', ''))
-    .sort();
+  const skillsRoot = join(ROOT, 'skills');
+  const results: string[] = [];
+  for (const domain of readdirSync(skillsRoot)) {
+    const domainPath = join(skillsRoot, domain);
+    for (const skill of readdirSync(domainPath)) {
+      if (existsSync(join(domainPath, skill, 'SKILL.md'))) {
+        results.push(`./skills/${domain}/${skill}`);
+      }
+    }
+  }
+  return results.sort();
 }
 
 describe('plugin.json skills consistency', () => {
