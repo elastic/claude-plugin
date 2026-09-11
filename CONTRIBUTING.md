@@ -31,19 +31,24 @@ claude --plugin-dir /path/to/claude-plugin
 
 ## Making changes
 
-1. Create a branch from `main` (use `origin`, not a personal fork).
+1. Create a branch from `main` (use `origin` or a personal fork).
 2. Make your changes.
 3. Ensure `npm run lint`, `npm test`, and `claude plugin validate --strict .`
    all pass.
 4. Open a PR against `main`.
 
-CI will automatically add a changelog entry from your PR title. Add the
-`skip-changelog` label if the change doesn't warrant one (e.g. CI config,
+## Changelog
+
+The changelog follows [keep-a-changelog](https://keepachangelog.com/) format.
+
+CI auto-generates entries from PR titles into the `[Unreleased]` section.
+Add the `skip-changelog` label if the change doesn't warrant one (e.g. CI config,
 docs-only changes).
+Adding this label _after_ a changelog commit is generated will revert that commit.
 
 ## Commit messages
 
-Use `Assisted-by:` trailers (not `Co-Authored-By:`) for AI-assisted commits,
+Use `Assisted-by:` trailers for AI-assisted commits,
 following the Linux kernel convention adopted at Elastic:
 
 ```

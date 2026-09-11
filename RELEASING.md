@@ -24,8 +24,5 @@ This plugin follows [semver](https://semver.org/):
 
 ## Changelog
 
-The changelog follows [keep-a-changelog](https://keepachangelog.com/) format.
-
-- CI auto-generates entries from PR titles into the `[Unreleased]` section.
-- The release workflow stamps `[Unreleased]` with the version and date.
-- Add the `skip-changelog` label to PRs that shouldn't appear in the changelog.
+The release workflow stamps `[Unreleased]` with the version and date, and adds a new,
+empty, `[Unreleased]` section.
