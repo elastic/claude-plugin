@@ -9,6 +9,11 @@
       "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
       "addLabels": ["renovate-auto-approve"],
       "automerge": true
+    },
+    {
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
