@@ -11,6 +11,7 @@
       "automerge": true
     },
     {
+      "description": "ts-jest requires typescript <7; remove this rule once ts-jest supports TS7",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
     }
