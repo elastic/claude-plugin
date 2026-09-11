@@ -2,9 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["local>elastic/renovate-config"],
   "labels": ["skip-changelog"],
+  "automergeStrategy": "squash",
+  "automergeType": "pr",
   "packageRules": [
     {
       "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "addLabels": ["renovate-auto-approve"],
       "automerge": true
     }
   ]
