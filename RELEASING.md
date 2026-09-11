@@ -1,0 +1,31 @@
+# Releasing
+
+Releases are managed through GitHub Actions. Do not manually bump the version
+in `plugin.json` — the workflow owns that.
+
+## How to release
+
+1. Go to **Actions** → **Release** → **Run workflow**.
+2. Enter the target version (e.g. `0.1.0`). Must be a single logical bump
+   (patch, minor, or major) from the current version.
+3. The workflow validates the version, bumps `plugin.json`, stamps the
+   changelog, and opens a release PR with the `skip-changelog` label.
+4. Review and merge the release PR.
+5. On merge, the **Tag Release** workflow automatically creates the git tag
+   (`elastic--v{version}`) and a GitHub Release.
+
+## Versioning
+
+This plugin follows [semver](https://semver.org/):
+
+- **Patch** (`0.0.X`): bug fixes, docs, CI changes.
+- **Minor** (`0.X.0`): new skills synced, new hooks added, non-breaking changes.
+- **Major** (`X.0.0`): breaking changes to the plugin manifest or hook behavior.
+
+## Changelog
+
+The changelog follows [keep-a-changelog](https://keepachangelog.com/) format.
+
+- CI auto-generates entries from PR titles into the `[Unreleased]` section.
+- The release workflow stamps `[Unreleased]` with the version and date.
+- Add the `skip-changelog` label to PRs that shouldn't appear in the changelog.
