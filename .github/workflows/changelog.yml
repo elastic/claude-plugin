@@ -165,19 +165,25 @@ jobs:
           git commit -m "chore: add changelog entry for PR #${{ github.event.pull_request.number }}"
           git push
 
-      - name: Require manual changelog entry for fork PRs
+      - name: Validate changelog entry for fork PRs
         if: >-
           github.event.pull_request.head.repo.full_name != github.repository
-          && steps.check.outputs.modified == 'false'
           && steps.plugin.outputs.changed == 'true'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "::error::Fork PRs that change plugin content require a manual CHANGELOG.md entry."
-          echo ""
-          echo "For branches on this repo, a changelog entry is auto-generated."
-          echo "Since this PR is from a fork, please add an entry manually:"
-          echo ""
-          echo "  1. Add a line under the '## [Unreleased]' > '### Added' section in CHANGELOG.md:"
-          echo "     - Your PR title (#${{ github.event.pull_request.number }})"
-          echo ""
-          echo "  Alternatively, add the 'skip-changelog' label if no entry is needed."
-          exit 1
+          # Extract the [Unreleased] section from CHANGELOG.md
+          unreleased=$(sed -n '/^## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | head -n -1)
+
+          if ! echo "$unreleased" | grep -qF "(#${PR_NUMBER})"; then
+            echo "::error::CHANGELOG.md is missing an entry for this PR in the [Unreleased] section."
+            echo ""
+            echo "For branches on this repo, a changelog entry is auto-generated."
+            echo "Since this PR is from a fork, please add an entry manually:"
+            echo ""
+            echo "  1. Add a line under the '## [Unreleased]' > '### Added' section in CHANGELOG.md:"
+            echo "     - Your PR title (#${PR_NUMBER})"
+            echo ""
+            echo "  Alternatively, add the 'skip-changelog' label if no entry is needed."
+            exit 1
+          fi
