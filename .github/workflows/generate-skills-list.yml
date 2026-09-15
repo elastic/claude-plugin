@@ -1,7 +1,7 @@
 name: Generate skills list
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [main]
     paths:
       - 'skills/**'
@@ -15,23 +15,16 @@ permissions:
 jobs:
   generate:
     name: Update plugin.json skills array
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
-      # Check out the base branch to get the trusted generate script
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
-          path: trusted
-
-      # Check out the PR head for the actual content
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate skills list
-        run: bash trusted/scripts/generate-skills-list.sh
+        run: bash scripts/generate-skills-list.sh
 
       - name: Check for changes
         id: diff
@@ -50,3 +43,27 @@ jobs:
           git add .claude-plugin/plugin.json
           git commit -m "chore: regenerate plugin.json skills list"
           git push
+
+  check-fork:
+    name: Validate plugin.json skills array (Fork)
+    if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Generate skills list and check for drift
+        run: |
+          cp .claude-plugin/plugin.json .claude-plugin/plugin.json.before
+          bash scripts/generate-skills-list.sh
+          if ! diff -q .claude-plugin/plugin.json.before .claude-plugin/plugin.json > /dev/null 2>&1; then
+            echo "::error::The skills array in plugin.json is out of date."
+            echo ""
+            echo "For branches on this repo, plugin.json is auto-updated."
+            echo "Since this PR is from a fork, please regenerate it manually:"
+            echo ""
+            echo "  bash scripts/generate-skills-list.sh"
+            echo ""
+            echo "Then commit the updated .claude-plugin/plugin.json."
+            exit 1
+          fi
+          echo "plugin.json skills array is up to date."
