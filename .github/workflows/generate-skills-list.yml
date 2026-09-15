@@ -1,7 +1,7 @@
 name: Generate skills list
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     paths:
       - 'skills/**'
@@ -17,13 +17,21 @@ jobs:
     name: Update plugin.json skills array
     runs-on: ubuntu-latest
     steps:
+      # Check out the base branch to get the trusted generate script
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: trusted
+
+      # Check out the PR head for the actual content
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate skills list
-        run: bash scripts/generate-skills-list.sh
+        run: bash trusted/scripts/generate-skills-list.sh
 
       - name: Check for changes
         id: diff

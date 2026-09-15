@@ -1,7 +1,7 @@
 name: Changelog
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
 
@@ -17,11 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch base branch for comparison
+        if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          git remote add upstream "https://github.com/${{ github.repository }}.git"
+          git fetch upstream ${{ github.event.pull_request.base.ref }}
+
       - name: Revert bot changelog commits
+        env:
+          BASE_REF: ${{ github.event.pull_request.head.repo.full_name != github.repository && 'upstream' || 'origin' }}/${{ github.event.pull_request.base.ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -31,9 +40,9 @@ jobs:
 
           # Find bot-authored changelog commits for this PR that haven't been reverted yet
           reverted=false
-          for sha in $(git log --reverse --format='%H' origin/${{ github.base_ref }}..HEAD --grep="$commit_msg" --author="github-actions\[bot\]"); do
+          for sha in $(git log --reverse --format='%H' "${BASE_REF}..HEAD" --grep="$commit_msg" --author="github-actions\[bot\]"); do
             # Skip if a revert of this commit already exists
-            if git log --format='%s' origin/${{ github.base_ref }}..HEAD | grep -qF "Revert \"$commit_msg\""; then
+            if git log --format='%s' "${BASE_REF}..HEAD" | grep -qF "Revert \"$commit_msg\""; then
               continue
             fi
             git revert --no-edit "$sha"
@@ -51,14 +60,23 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fetch base branch for comparison
+        if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          git remote add upstream "https://github.com/${{ github.repository }}.git"
+          git fetch upstream ${{ github.event.pull_request.base.ref }}
+
       - name: Check if CHANGELOG.md was modified
         id: check
+        env:
+          BASE_REF: ${{ github.event.pull_request.head.repo.full_name != github.repository && 'upstream' || 'origin' }}/${{ github.event.pull_request.base.ref }}
         run: |
-          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- CHANGELOG.md)
+          changed=$(git diff --name-only "${BASE_REF}...HEAD" -- CHANGELOG.md)
           if [ -n "$changed" ]; then
             echo "modified=true" >> "$GITHUB_OUTPUT"
           else
@@ -67,8 +85,10 @@ jobs:
 
       - name: Check if plugin-relevant files changed
         id: plugin
+        env:
+          BASE_REF: ${{ github.event.pull_request.head.repo.full_name != github.repository && 'upstream' || 'origin' }}/${{ github.event.pull_request.base.ref }}
         run: |
-          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- \
+          changed=$(git diff --name-only "${BASE_REF}...HEAD" -- \
             '.claude-plugin/plugin.json' \
             'skills/**' \
             'hooks/**' \
@@ -81,10 +101,12 @@ jobs:
 
       - name: Detect skill changes
         id: skills
+        env:
+          BASE_REF: ${{ github.event.pull_request.head.repo.full_name != github.repository && 'upstream' || 'origin' }}/${{ github.event.pull_request.base.ref }}
         run: |
-          added=$(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD -- 'skills/**/SKILL.md' \
+          added=$(git diff --name-only --diff-filter=A "${BASE_REF}...HEAD" -- 'skills/**/SKILL.md' \
             | sed 's|skills/||; s|/SKILL.md||' | sort | jq -R . | jq -sc .)
-          removed=$(git diff --name-only --diff-filter=D origin/${{ github.base_ref }}...HEAD -- 'skills/**/SKILL.md' \
+          removed=$(git diff --name-only --diff-filter=D "${BASE_REF}...HEAD" -- 'skills/**/SKILL.md' \
             | sed 's|skills/||; s|/SKILL.md||' | sort | jq -R . | jq -sc .)
           echo "added=$added" >> "$GITHUB_OUTPUT"
           echo "removed=$removed" >> "$GITHUB_OUTPUT"
