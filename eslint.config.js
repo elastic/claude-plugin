@@ -42,25 +42,49 @@ const LICENSE_HEADER = `/*
 const normalizeWhitespace = (str) => str.replace(/\s+/g, ' ').trim();
 const expectedNormalized = normalizeWhitespace(LICENSE_HEADER);
 
+function startsWithHashbang(text) {
+  const firstLine = text.split('\n')[0];
+  return firstLine.trimStart().startsWith('#!');
+}
+
 const requireLicenseHeader = {
   meta: { type: 'suggestion', fixable: 'code', schema: [] },
   create(context) {
     return {
       Program() {
-        const comments = context.sourceCode.getAllComments();
-        const hasHeader = comments.some(
-          (c) =>
-            c.type === 'Block' &&
-            normalizeWhitespace(`/*${c.value}*/`) === expectedNormalized,
-        );
-        if (!hasHeader) {
-          context.report({
-            loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 0 } },
-            message: 'File must start with the Apache 2.0 license header',
-            fix: (fixer) =>
-              fixer.insertTextBeforeRange([0, 0], LICENSE_HEADER + '\n\n'),
-          });
+        const sourceCode = context.sourceCode;
+        const text = sourceCode.getText();
+        const firstComment = sourceCode
+          .getAllComments()
+          .find((c) => c.type === 'Block');
+
+        if (
+          firstComment &&
+          normalizeWhitespace(`/*${firstComment.value}*/`) ===
+            expectedNormalized
+        ) {
+          const textBefore = text.slice(
+            0,
+            sourceCode.getIndexFromLoc(firstComment.loc.start),
+          );
+          if (textBefore.trim() === '' || startsWithHashbang(textBefore)) {
+            return;
+          }
         }
+
+        const insertOffset = startsWithHashbang(text)
+          ? text.indexOf('\n') + 1
+          : 0;
+
+        context.report({
+          loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 0 } },
+          message: 'File must start with the Apache 2.0 license header',
+          fix: (fixer) =>
+            fixer.insertTextBeforeRange(
+              [insertOffset, insertOffset],
+              (insertOffset > 0 ? '\n' : '') + LICENSE_HEADER + '\n\n',
+            ),
+        });
       },
     };
   },
