@@ -14,4 +14,4 @@ metadata:
 spec:
   type: other
   lifecycle: experimental
-  owner: group:search-eng
+  owner: group:agent-skills-codeowners
