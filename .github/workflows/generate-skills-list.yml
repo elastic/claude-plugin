@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate skills list
@@ -35,10 +35,27 @@ jobs:
           fi
 
       - name: Commit updated plugin.json
-        if: steps.diff.outputs.changed == 'true'
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && steps.diff.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .claude-plugin/plugin.json
           git commit -m "chore: regenerate plugin.json skills list"
           git push
+
+      - name: Require up-to-date plugin.json for fork PRs
+        if: >-
+          github.event.pull_request.head.repo.full_name != github.repository
+          && steps.diff.outputs.changed == 'true'
+        run: |
+          echo "::error::The skills array in plugin.json is out of date."
+          echo ""
+          echo "For branches on this repo, plugin.json is auto-updated."
+          echo "Since this PR is from a fork, please regenerate it manually:"
+          echo ""
+          echo "  bash scripts/generate-skills-list.sh"
+          echo ""
+          echo "Then commit the updated .claude-plugin/plugin.json."
+          exit 1

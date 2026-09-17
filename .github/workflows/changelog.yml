@@ -12,7 +12,9 @@ permissions:
 jobs:
   revert-changelog:
     name: Revert Changelog Entry
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && contains(github.event.pull_request.labels.*.name, 'skip-changelog')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -51,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,6 +83,10 @@ jobs:
 
       - name: Detect skill changes
         id: skills
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && steps.check.outputs.modified == 'false'
+          && steps.plugin.outputs.changed == 'true'
         run: |
           added=$(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD -- 'skills/**/SKILL.md' \
             | sed 's|skills/||; s|/SKILL.md||' | sort | jq -R . | jq -sc .)
@@ -90,7 +96,10 @@ jobs:
           echo "removed=$removed" >> "$GITHUB_OUTPUT"
 
       - name: Add changelog entry
-        if: steps.check.outputs.modified == 'false' && steps.plugin.outputs.changed == 'true'
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && steps.check.outputs.modified == 'false'
+          && steps.plugin.outputs.changed == 'true'
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -144,7 +153,10 @@ jobs:
           PYEOF
 
       - name: Commit and push changelog update
-        if: steps.check.outputs.modified == 'false' && steps.plugin.outputs.changed == 'true'
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && steps.check.outputs.modified == 'false'
+          && steps.plugin.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -152,3 +164,26 @@ jobs:
           git diff --staged --quiet && exit 0
           git commit -m "chore: add changelog entry for PR #${{ github.event.pull_request.number }}"
           git push
+
+      - name: Validate changelog entry for fork PRs
+        if: >-
+          github.event.pull_request.head.repo.full_name != github.repository
+          && steps.plugin.outputs.changed == 'true'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Extract the [Unreleased] section from CHANGELOG.md
+          unreleased=$(sed -n '/^## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | head -n -1)
+
+          if ! echo "$unreleased" | grep -qF "(#${PR_NUMBER})"; then
+            echo "::error::CHANGELOG.md is missing an entry for this PR in the [Unreleased] section."
+            echo ""
+            echo "For branches on this repo, a changelog entry is auto-generated."
+            echo "Since this PR is from a fork, please add an entry manually:"
+            echo ""
+            echo "  1. Add a line under the '## [Unreleased]' > '### Added' section in CHANGELOG.md:"
+            echo "     - Your PR title (#${PR_NUMBER})"
+            echo ""
+            echo "  Alternatively, add the 'skip-changelog' label if no entry is needed."
+            exit 1
+          fi
