@@ -79,14 +79,34 @@ const requireLicenseHeader = {
           ? text.indexOf('\n') + 1
           : 0;
 
+        const misplacedComment = sourceCode
+          .getAllComments()
+          .find(
+            (c) =>
+              c.type === 'Block' &&
+              normalizeWhitespace(`/*${c.value}*/`) === expectedNormalized,
+          );
+
         context.report({
           loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 0 } },
           message: 'File must start with the Apache 2.0 license header',
-          fix: (fixer) =>
-            fixer.insertTextBeforeRange(
-              [insertOffset, insertOffset],
-              (insertOffset > 0 ? '\n' : '') + LICENSE_HEADER + '\n\n',
-            ),
+          fix(fixer) {
+            const fixes = [
+              fixer.insertTextBeforeRange(
+                [insertOffset, insertOffset],
+                (insertOffset > 0 ? '\n' : '') + LICENSE_HEADER + '\n\n',
+              ),
+            ];
+            if (misplacedComment) {
+              const start = sourceCode.getIndexFromLoc(
+                misplacedComment.loc.start,
+              );
+              let end = sourceCode.getIndexFromLoc(misplacedComment.loc.end);
+              while (end < text.length && text[end] === '\n') end++;
+              fixes.push(fixer.removeRange([start, end]));
+            }
+            return fixes;
+          },
         });
       },
     };
