@@ -14,6 +14,13 @@ in `plugin.json` — the workflow owns that.
 5. On merge, the **Tag Release** workflow automatically creates the git tag
    (`elastic--v{version}`) and a GitHub Release.
 
+## Tag format
+
+Git tags use the `{name}--v{version}` format (e.g. `elastic--v0.1.0`). This
+matches the convention expected by `claude plugin tag` and the Claude
+marketplace, even though CI creates tags with raw `git tag` rather than that
+command. Changing the format would require a corresponding marketplace update.
+
 ## Versioning
 
 This plugin follows [semver](https://semver.org/):
