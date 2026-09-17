@@ -67,7 +67,10 @@ const requireLicenseHeader = {
             0,
             sourceCode.getIndexFromLoc(firstComment.loc.start),
           );
-          if (textBefore.trim() === '' || startsWithHashbang(textBefore)) {
+          const afterHashbang = startsWithHashbang(textBefore)
+            ? textBefore.slice(textBefore.indexOf('\n') + 1)
+            : textBefore;
+          if (afterHashbang.trim() === '') {
             return;
           }
         }
