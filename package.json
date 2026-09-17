@@ -10,7 +10,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@jest/globals": "30.5.1",
-    "@types/node": "22.20.2",
+    "@types/node": "24.13.4",
     "eslint": "10.10.0",
     "jest": "30.5.1",
     "prettier": "3.9.6",
