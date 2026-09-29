@@ -2,7 +2,7 @@ name: Tag Release
 
 on:
   push:
-    branches: [main]
+    branches: [stable]
     paths:
       - '.claude-plugin/plugin.json'
 
@@ -70,4 +70,4 @@ jobs:
           gh release create "$TAG" \
             --verify-tag \
             --title "v${VERSION}" \
-            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+            --notes "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/$TAG/CHANGELOG.md) for details."
