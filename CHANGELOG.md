@@ -4,6 +4,8 @@ All notable changes to this plugin are documented here.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-29
+
 ### Added
 
 - Add Elastic Docs MCP server (`https://www.elastic.co/docs/_mcp/`) so Claude can search and retrieve Elastic documentation without leaving the conversation (#25)
