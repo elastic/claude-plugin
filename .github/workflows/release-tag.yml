@@ -2,7 +2,7 @@ name: Tag Release
 
 on:
   push:
-    branches: [main]
+    branches: [stable]
     paths:
       - '.claude-plugin/plugin.json'
 

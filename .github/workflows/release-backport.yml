@@ -1,0 +1,54 @@
+name: Backport Release to Main
+
+on:
+  push:
+    branches: [stable]
+    paths:
+      - '.claude-plugin/plugin.json'
+      - 'CHANGELOG.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Sync main with stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: stable
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: |
+          version=$(jq -r '.version' .claude-plugin/plugin.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create backport PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          branch="automation/backport-v${VERSION}"
+
+          # Check if main is already up to date with stable
+          if git merge-base --is-ancestor stable origin/main 2>/dev/null; then
+            echo "main is already up to date with stable, nothing to backport"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch" stable
+          git push origin "$branch"
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore: backport release v${VERSION} to main" \
+            --body "Syncs main with the v${VERSION} release on stable so both branches share the same history." \
+            --label "skip-changelog"

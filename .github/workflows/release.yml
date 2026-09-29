@@ -132,8 +132,8 @@ jobs:
           git push origin "$branch"
 
           gh pr create \
-            --base main \
+            --base stable \
             --head "$branch" \
             --title "release: v${INPUT_VERSION}" \
-            --body "Automated release PR for v${INPUT_VERSION}." \
+            --body "Automated release PR for v${INPUT_VERSION}. Merging this will update the published plugin." \
             --label "skip-changelog"
