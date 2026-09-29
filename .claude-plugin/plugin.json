@@ -1,6 +1,6 @@
 {
   "name": "elastic",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Elastic plugin for Claude - skills for building with the Elastic stack.",
   "author": {
     "name": "Elastic",
@@ -20,6 +20,11 @@
     "search",
     "ingest"
   ],
+  "icon": "./logo-elastic-glyph-color.svg",
+  "privacyPolicyUrl": "https://www.elastic.co/trust/privacy",
+  "supportUrl": "https://support.elastic.co",
+  "termsOfServiceUrl": "https://www.elastic.co/legal/customer-agreements",
+  "documentationUrl": "https://www.elastic.co/docs",
   "skills": [
     "./skills/cloud/onboarding",
     "./skills/cloud/provisioning",

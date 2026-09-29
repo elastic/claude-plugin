@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: main
           fetch-depth: 0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -38,8 +39,8 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          current=$(jq -r '.version' .claude-plugin/plugin.json)
-          echo "Current version: $current"
+          current=$(git show origin/stable:.claude-plugin/plugin.json | jq -r '.version')
+          echo "Current version (stable): $current"
           echo "Target version:  $INPUT_VERSION"
 
           IFS='.' read -r cur_major cur_minor cur_patch <<< "$current"
@@ -132,8 +133,8 @@ jobs:
           git push origin "$branch"
 
           gh pr create \
-            --base main \
+            --base stable \
             --head "$branch" \
             --title "release: v${INPUT_VERSION}" \
-            --body "Automated release PR for v${INPUT_VERSION}." \
+            --body "Automated release PR for v${INPUT_VERSION}. Merging this will update the published plugin." \
             --label "skip-changelog"
