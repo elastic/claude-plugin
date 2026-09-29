@@ -39,8 +39,8 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          current=$(jq -r '.version' .claude-plugin/plugin.json)
-          echo "Current version: $current"
+          current=$(git show origin/stable:.claude-plugin/plugin.json | jq -r '.version')
+          echo "Current version (stable): $current"
           echo "Target version:  $INPUT_VERSION"
 
           IFS='.' read -r cur_major cur_minor cur_patch <<< "$current"
