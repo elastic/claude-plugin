@@ -49,14 +49,15 @@ Assisted-by: Claude Code <noreply@anthropic.com>
 
 ## CI / GitHub Actions
 
-Six workflows:
+Seven workflows:
 
 1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push/PR to `main` and `stable`, and daily cron.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
-4. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), bumps `plugin.json`, stamps the changelog, and opens a PR targeting `stable` with `skip-changelog`.
-5. **Tag Release** (`release-tag.yml`) — fires on push to `stable` when `plugin.json` changes. Creates the git tag (`{name}--v{version}`) and GitHub Release after the release PR merges.
-6. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR to sync `main` with `stable` so both branches share the same history after a release.
+4. **Auto-approve Renovate** (`auto-approve-renovate-prs.yml`) — auto-approves Renovate dependency PRs with the `renovate-auto-approve` label.
+5. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), bumps `plugin.json`, stamps the changelog, and opens a PR targeting `stable` with `skip-changelog`.
+6. **Tag Release** (`release-tag.yml`) — fires on push to `stable` when `plugin.json` changes. Creates the git tag (`{name}--v{version}`) and GitHub Release after the release PR merges.
+7. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR to sync `main` with `stable` so both branches share the same history after a release.
 
 ## Branching and releases
 

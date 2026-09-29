@@ -41,10 +41,17 @@ jobs:
             exit 0
           fi
 
+          # Check if a backport PR already exists for this version
+          existing=$(gh pr list --base main --head "$branch" --state open --json number -q '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "Backport PR already open: #$existing"
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$branch" stable
-          git push origin "$branch"
+          git checkout -B "$branch" stable
+          git push --force-with-lease origin "$branch"
 
           gh pr create \
             --base main \
