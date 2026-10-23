@@ -4,6 +4,10 @@ All notable changes to this plugin are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- add hooks.json for telemetry (#58)
+
 ## [0.1.0] - 2026-09-29
 
 ### Added
