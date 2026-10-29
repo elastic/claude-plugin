@@ -41,7 +41,7 @@ type Props = Record<string, string>;
 
 const isOn = (v: string | undefined) => {
   const value = v?.trim().toLowerCase();
-  return value === '1' || value === 'yes';
+  return value === '1' || value === 'true' || value === 'yes' || value === 'on';
 };
 
 /**
