@@ -7,6 +7,8 @@ All notable changes to this plugin are documented here.
 ### Added
 
 - add hooks.json for telemetry (#58)
+- chore: sync agent-skills 0.7.0 (#61)
+  - Skills added: `kibana/kibana-cases`, `kibana/kibana-context-engine`, `observability/csp-investigation`, `security/alert-analysis`, `security/ml-integrations`
 
 ## [0.1.0] - 2026-09-29
 

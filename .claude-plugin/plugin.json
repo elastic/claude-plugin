@@ -41,16 +41,21 @@
     "./skills/kibana/kibana-agent-builder",
     "./skills/kibana/kibana-alerting-rules",
     "./skills/kibana/kibana-anomaly-detection",
+    "./skills/kibana/kibana-cases",
+    "./skills/kibana/kibana-context-engine",
     "./skills/kibana/kibana-dashboards",
     "./skills/kibana/kibana-workflows",
+    "./skills/observability/csp-investigation",
     "./skills/observability/k8s-investigation",
     "./skills/observability/llm-obs",
     "./skills/observability/onboarding",
     "./skills/observability/service-reliability",
     "./skills/observability/sre-triage",
+    "./skills/security/alert-analysis",
     "./skills/security/alert-triage",
     "./skills/security/case-management",
     "./skills/security/detection-rule-management",
-    "./skills/security/generate-security-sample-data"
+    "./skills/security/generate-security-sample-data",
+    "./skills/security/ml-integrations"
   ]
 }
