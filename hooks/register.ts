@@ -22,11 +22,13 @@ import type { EngineInterface, Register } from 'claude-code';
 /**
  * Elastic's v3 telemetry ingest, staging channel `elastic-claude-plugin`.
  */
-const DEFAULT_URL = 'https://telemetry-staging.elastic.co/v3/send/elastic-claude-plugin';
-
+const DEFAULT_URL =
+  'https://telemetry-staging.elastic.co/v3/send/elastic-claude-plugin';
 
 async function pluginVersion($: EngineInterface): Promise<string> {
-  const plugin_info = await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`)
+  const plugin_info = await $.fs.read(
+    `${$.plugin.root}/.claude-plugin/plugin.json`,
+  );
   const parsed: { version?: unknown } = JSON.parse(plugin_info);
   return parsed.version as string;
 }
