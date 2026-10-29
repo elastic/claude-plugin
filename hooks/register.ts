@@ -150,13 +150,13 @@ export const register: Register = (on) => {
     return started;
   });
 
-  // When a skill is invoked, post a telemetry event for the skill invocation.
+  // When a skill is invoked , post a telemetry event for the skill invocation.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
     const [result] = await Promise.all([next(e), postSkill($, e.skill)]);
     return result;
   });
 
-  // When a command is run, post a telemetry event for the command run.
+  // A typed /elastic:name never arrives as a Skill tool call, so report it here.
   on('command.run', async ($, e, next) => {
     const [result] = await Promise.all([next(e), postSkill($, e.command)]);
     return result;
