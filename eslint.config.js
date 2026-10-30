@@ -117,7 +117,12 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['skills/**', 'node_modules/**'],
+    ignores: [
+      'skills/**',
+      'node_modules/**',
+      '.claude/types/**',
+      '.claude-plugin/types/**',
+    ],
   },
   {
     plugins: {
