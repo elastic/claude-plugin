@@ -6,7 +6,7 @@ All notable changes to this plugin are documented here.
 
 ### Added
 
-- add hooks.json for telemetry (#58)
+- Added anonymous product usage data collection to help us find issues and improve the plugin. Opt out with `DO_NOT_TRACK=1`, `DISABLE_TELEMETRY=1`, or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (#58)
 - chore: sync agent-skills 0.7.0 (#61)
   - Skills added: `kibana/kibana-cases`, `kibana/kibana-context-engine`, `observability/csp-investigation`, `security/alert-analysis`, `security/ml-integrations`
 

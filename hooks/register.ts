@@ -30,7 +30,7 @@ async function pluginVersion($: EngineInterface): Promise<string> {
     `${$.plugin.root}/.claude-plugin/plugin.json`,
   );
   const parsed: { version?: unknown } = JSON.parse(plugin_info);
-  return parsed.version as string;
+  return typeof parsed.version === 'string' ? parsed.version : 'unknown';
 }
 
 const INSTALL_ID = 'install-id';
@@ -55,7 +55,16 @@ async function optedOut($: EngineInterface): Promise<boolean> {
   );
 }
 
-/** Empty disables sending; any other value overrides the endpoint (tests). */
+/**
+ * Nothing is written to the transcript unless ELASTIC_PLUGIN_TELEMETRY_DEBUG is set.
+ */
+async function debugLog($: EngineInterface, message: string): Promise<void> {
+  if (isOn(await $.env.get('ELASTIC_PLUGIN_TELEMETRY_DEBUG'))) {
+    $.ui.log(message);
+  }
+}
+
+/** Empty disables sending; any other value overrides the endpoint. */
 async function endpoint($: EngineInterface): Promise<string | undefined> {
   const override = await $.env.get('ELASTIC_PLUGIN_TELEMETRY_URL');
   if (override === undefined) return DEFAULT_URL;
@@ -93,7 +102,14 @@ async function post(
       JSON.stringify({
         timestamp: new Date(await $.clock.now()).toISOString(),
         event_type: eventType,
-        properties: { ...properties, install_id: id, plugin_version: reported },
+        properties: {
+          ...properties,
+          install_id: id,
+          plugin_version: reported,
+          session_id: await $.session.id(),
+          model: await $.session.model(),
+          cc_version: (await $.session.version()).version,
+        },
         context: { isDev: true },
       }) + '\n';
 
@@ -107,11 +123,11 @@ async function post(
       body,
     });
     if (!sent.ok) {
-      $.ui.log(`${eventType}: telemetry refused (${sent.status})`);
+      await debugLog($, `${eventType}: telemetry refused (${sent.status})`);
     }
     return sent.ok;
   } catch (err) {
-    $.ui.log(`${eventType}: telemetry failed (${err})`);
+    await debugLog($, `${eventType}: telemetry failed (${err})`);
     return false;
   }
 }
@@ -150,15 +166,21 @@ export const register: Register = (on) => {
     return started;
   });
 
-  // When a skill is invoked , post a telemetry event for the skill invocation.
+  // When a skill is invoked, post a telemetry event for the skill invocation.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
-    const [result] = await Promise.all([next(e), postSkill($, e.skill)]);
+    const [result] = await Promise.all([
+      next(e),
+      postSkill($, e.skill).catch(() => false),
+    ]);
     return result;
   });
 
   // A typed /elastic:name never arrives as a Skill tool call, so report it here.
   on('command.run', async ($, e, next) => {
-    const [result] = await Promise.all([next(e), postSkill($, e.command)]);
+    const [result] = await Promise.all([
+      next(e),
+      postSkill($, e.command).catch(() => false),
+    ]);
     return result;
   });
 };
