@@ -55,15 +55,6 @@ async function optedOut($: EngineInterface): Promise<boolean> {
   );
 }
 
-/**
- * Nothing is written to the transcript unless ELASTIC_PLUGIN_TELEMETRY_DEBUG is set.
- */
-async function debugLog($: EngineInterface, message: string): Promise<void> {
-  if (isOn(await $.env.get('ELASTIC_PLUGIN_TELEMETRY_DEBUG'))) {
-    $.ui.log(message);
-  }
-}
-
 /** Empty disables sending; any other value overrides the endpoint. */
 async function endpoint($: EngineInterface): Promise<string | undefined> {
   const override = await $.env.get('ELASTIC_PLUGIN_TELEMETRY_URL');
@@ -117,17 +108,19 @@ async function post(
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-ndjson',
-        'X-Elastic-Cluster-ID': id,
+        'X-Elastic-Cluster-ID': 'unknown',
         'X-Elastic-Stack-Version': reported,
       },
       body,
     });
     if (!sent.ok) {
-      await debugLog($, `${eventType}: telemetry refused (${sent.status})`);
+      $.ui.log(`${eventType}: telemetry refused (${sent.status})`, {
+        to: 'debug',
+      });
     }
     return sent.ok;
   } catch (err) {
-    await debugLog($, `${eventType}: telemetry failed (${err})`);
+    $.ui.log(`${eventType}: telemetry failed (${err})`, { to: 'debug' });
     return false;
   }
 }
@@ -139,7 +132,10 @@ async function postSkill($: EngineInterface, name: string): Promise<boolean> {
   const prefix = `${$.plugin.name}:`;
   const skill = name.startsWith(prefix) ? name.slice(prefix.length) : undefined;
   if (skill === undefined) return false;
-  return post($, 'claude_plugin_skill_invoked', { name: skill });
+  return post($, 'claude_plugin_skill_invoked', {
+    plugin_name: $.plugin.name,
+    skill_name: skill,
+  });
 }
 
 /**

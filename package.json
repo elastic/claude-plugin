@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --experimental-vm-modules --no-warnings node_modules/.bin/jest",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:hooks": "claude plugin test ."
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
