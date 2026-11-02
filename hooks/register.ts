@@ -37,7 +37,7 @@ const INSTALL_ID = 'install-id';
 const INSTALL_REPORTED = 'install-reported';
 const ACTIVE_REPORTED = 'active-reported';
 
-type Props = Record<string, string>;
+type Props = Record<string, string | number | boolean | null>;
 
 const isOn = (v: string | undefined) => {
   const value = v?.trim().toLowerCase();
@@ -128,14 +128,52 @@ async function post(
 /**
  * Posts a telemetry event for a skill invocation.
  */
-async function postSkill($: EngineInterface, name: string): Promise<boolean> {
+async function postSkill(
+  $: EngineInterface,
+  name: string,
+  durationMs: number,
+  isError: boolean,
+): Promise<boolean> {
   const prefix = `${$.plugin.name}:`;
   const skill = name.startsWith(prefix) ? name.slice(prefix.length) : undefined;
   if (skill === undefined) return false;
   return post($, 'claude_plugin_skill_invoked', {
     plugin_name: $.plugin.name,
     skill_name: skill,
+    duration_ms: durationMs,
+    is_error: isError,
   });
+}
+
+/**
+ * Runs the rest of the chain and reports the skill with how long it took and
+ * whether it failed. A throw counts as a failure and is passed on untouched,
+ * so a telemetry problem never changes what the caller sees.
+ */
+async function reportSkill<T>(
+  $: EngineInterface,
+  name: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const start = await $.clock.now();
+  const report = async (isError: boolean) => {
+    const durationMs = (await $.clock.now()) - start;
+    await postSkill($, name, durationMs, isError).catch(() => false);
+  };
+  try {
+    const result = await run();
+    // Only a tool result carries `isError`; a command reports nothing of its own.
+    const failed =
+      typeof result === 'object' &&
+      result !== null &&
+      'isError' in result &&
+      result.isError === true;
+    await report(failed);
+    return result;
+  } catch (err) {
+    await report(true);
+    throw err;
+  }
 }
 
 /**
@@ -145,16 +183,20 @@ export const register: Register = (on) => {
   // When a new session starts, post a telemetry event for the install.
   on('session.start', async ($, e, next) => {
     const started = await next(e);
+    const sessionProps: Props = {
+      surface: e.surface,
+      is_interactive: e.isInteractive,
+    };
 
     if ((await $.store.get(INSTALL_REPORTED)) !== true) {
-      if (await post($, 'claude_plugin_install', {})) {
+      if (await post($, 'claude_plugin_install', sessionProps)) {
         await $.store.set(INSTALL_REPORTED, true);
       }
     }
 
     const today = new Date(await $.clock.now()).toISOString().slice(0, 10);
     if ((await $.store.get(ACTIVE_REPORTED)) !== today) {
-      if (await post($, 'claude_plugin_active', {})) {
+      if (await post($, 'claude_plugin_active', sessionProps)) {
         await $.store.set(ACTIVE_REPORTED, today);
       }
     }
@@ -163,20 +205,11 @@ export const register: Register = (on) => {
   });
 
   // When a skill is invoked, post a telemetry event for the skill invocation.
-  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
-    const [result] = await Promise.all([
-      next(e),
-      postSkill($, e.skill).catch(() => false),
-    ]);
-    return result;
-  });
+  on('tool.call', { tool: 'Skill' }, ($, e, next) =>
+    reportSkill($, e.skill, () => next(e)),
+  );
 
   // A typed /elastic:name never arrives as a Skill tool call, so report it here.
-  on('command.run', async ($, e, next) => {
-    const [result] = await Promise.all([
-      next(e),
-      postSkill($, e.command).catch(() => false),
-    ]);
-    return result;
-  });
+  // A command carries no error of its own, so only a throw counts as one.
+  on('command.run', ($, e, next) => reportSkill($, e.command, () => next(e)));
 };

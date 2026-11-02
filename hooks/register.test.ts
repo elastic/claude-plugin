@@ -32,7 +32,7 @@ const DAY = 24 * 60 * 60 * 1000;
 type Event = {
   timestamp: string;
   event_type: string;
-  properties: Record<string, string>;
+  properties: Record<string, string | number | boolean | null>;
   context: { isDev: boolean };
 };
 
@@ -70,6 +70,10 @@ type Options = {
   offline?: boolean;
   /** The raw plugin.json the hook reads; a well-formed one unless given. */
   pluginJson?: string;
+  /** How long a tool call or command takes to answer; at once unless given. */
+  callMs?: number;
+  /** How the chain beneath the hook answers; it succeeds unless given. */
+  call?: 'error';
 };
 
 /**
@@ -83,7 +87,7 @@ function harness(on: On, options: Options = {}): Harness {
   const transcript: string[] = [];
   const debug: string[] = [];
 
-  mock.clock(on, { now: options.now ?? NOON });
+  const clock = mock.clock(on, { now: options.now ?? NOON });
   mock.store(on, options.store ?? {});
   mock.env(on, options.env ?? {});
 
@@ -119,8 +123,17 @@ function harness(on: On, options: Options = {}): Harness {
 
   // The bottom of each chain the plugin hooks.
   on('session.start', ($, e) => ({ cwd: e.cwd }));
-  on('tool.call', () => ({ result: { text: 'ok' }, text: 'ok' }));
-  on('command.run', () => ({ text: 'ok' }));
+  on('tool.call', async () => {
+    if (options.callMs) await clock.advance(options.callMs);
+    if (options.call === 'error') {
+      return { isError: true as const, result: 'boom', text: 'boom' };
+    }
+    return { result: { text: 'ok' }, text: 'ok' };
+  });
+  on('command.run', async () => {
+    if (options.callMs) await clock.advance(options.callMs);
+    return { text: 'ok' };
+  });
 
   return {
     events: () => events,
@@ -198,6 +211,32 @@ describe('session.start', () => {
       cc_version: CC_VERSION,
     });
     expect(install?.timestamp).toBe(new Date(NOON).toISOString());
+  });
+
+  test('carries the surface and whether a person is at the prompt', async ($, on) => {
+    const h = harness(on);
+
+    await $.session.start(STARTED);
+
+    for (const event of h.events()) {
+      expect(event.properties).toMatchObject({
+        surface: 'terminal',
+        is_interactive: true,
+      });
+    }
+  });
+
+  test('reports a -p or SDK run as headless', async ($, on) => {
+    const h = harness(on);
+
+    await $.session.start({ ...STARTED, surface: null, isInteractive: false });
+
+    for (const event of h.events()) {
+      expect(event.properties).toMatchObject({
+        surface: null,
+        is_interactive: false,
+      });
+    }
   });
 
   test('reuses one install id across events and sessions', async ($, on) => {
@@ -327,9 +366,23 @@ describe('skills and commands', () => {
         properties: {
           plugin_name: 'elastic',
           skill_name: 'elasticsearch-esql',
+          is_error: false,
         },
       },
     ]);
+  });
+
+  test('marks a Skill call the tool reported an error for', async ($, on) => {
+    const h = harness(on, { store: settled(), call: 'error' });
+
+    const result = await $.tool.call({
+      tool: 'Skill',
+      skill: 'elastic:elasticsearch-esql',
+    });
+
+    // Reported as a failure, and the result still comes back untouched.
+    expect(result).toMatchObject({ isError: true });
+    expect(h.events()[0]?.properties.is_error).toBe(true);
   });
 
   test('ignores a Skill call from another plugin', async ($, on) => {
@@ -348,7 +401,11 @@ describe('skills and commands', () => {
     expect(h.events()).toMatchObject([
       {
         event_type: 'claude_plugin_skill_invoked',
-        properties: { plugin_name: 'elastic', skill_name: 'onboarding' },
+        properties: {
+          plugin_name: 'elastic',
+          skill_name: 'onboarding',
+          is_error: false,
+        },
       },
     ]);
   });
@@ -372,6 +429,39 @@ describe('skills and commands', () => {
     expect(result).toMatchObject({ text: 'ok' });
     expect(h.transcript()).toEqual([]);
     expect(h.debug().join('\n')).toContain('telemetry failed');
+  });
+});
+
+describe('skill duration', () => {
+  const settled = () => ({
+    'install-reported': true,
+    'active-reported': '2026-03-04',
+  });
+
+  test('carries how long the Skill call took', async ($, on) => {
+    const h = harness(on, { store: settled(), callMs: 250 });
+
+    await $.tool.call({ tool: 'Skill', skill: 'elastic:elasticsearch-esql' });
+
+    expect(h.events()).toMatchObject([
+      {
+        event_type: 'claude_plugin_skill_invoked',
+        properties: { skill_name: 'elasticsearch-esql', duration_ms: 250 },
+      },
+    ]);
+  });
+
+  test('carries how long a typed slash command took', async ($, on) => {
+    const h = harness(on, { store: settled(), callMs: 40 });
+
+    await $.command.run({ command: 'elastic:onboarding', ...TYPED });
+
+    expect(h.events()).toMatchObject([
+      {
+        event_type: 'claude_plugin_skill_invoked',
+        properties: { skill_name: 'onboarding', duration_ms: 40 },
+      },
+    ]);
   });
 });
 
