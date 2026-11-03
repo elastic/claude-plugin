@@ -25,6 +25,9 @@ const SESSION_ID = 'session-abc';
 const MODEL = 'claude-opus-5';
 const CC_VERSION = '2.1.308';
 
+/** What the status line would read off a session a little way in. */
+const CONTEXT = { tokens: 12_000, window: 200_000, percent: 6 };
+
 /** 2026-03-04T05:06:07Z, so the UTC day is unambiguous. */
 const NOON = Date.UTC(2026, 2, 4, 5, 6, 7);
 const DAY = 24 * 60 * 60 * 1000;
@@ -74,6 +77,12 @@ type Options = {
   callMs?: number;
   /** How the chain beneath the hook answers; it succeeds unless given. */
   call?: 'error';
+  /**
+   * The live context window; a middling reading unless given. `unavailable`
+   * makes the call throw, as it does before a session is bound.
+   */
+  context?:
+    { tokens?: number; window: number; percent?: number } | 'unavailable';
 };
 
 /**
@@ -97,6 +106,16 @@ function harness(on: On, options: Options = {}): Harness {
   on('session.id', () => ({ value: SESSION_ID }));
   on('session.model', () => ({ value: MODEL }));
   on('session.version', () => ({ value: { version: CC_VERSION } }));
+  on('session.usage', () => {
+    if (options.context === 'unavailable') throw new Error('no session bound');
+    return {
+      value: {
+        startedAt: NOON,
+        context: options.context ?? CONTEXT,
+        rateLimits: [],
+      },
+    };
+  });
 
   on('ui.log', ($, e) => {
     (e.to === 'debug' ? debug : transcript).push(e.text);
@@ -211,6 +230,48 @@ describe('session.start', () => {
       cc_version: CC_VERSION,
     });
     expect(install?.timestamp).toBe(new Date(NOON).toISOString());
+  });
+
+  test('carries the live context window', async ($, on) => {
+    const h = harness(on);
+
+    await $.session.start(STARTED);
+
+    for (const event of h.events()) {
+      expect(event.properties).toMatchObject({
+        context_tokens: CONTEXT.tokens,
+        context_window: CONTEXT.window,
+        context_percent: CONTEXT.percent,
+      });
+    }
+  });
+
+  test('carries nulls for a session that has not answered yet', async ($, on) => {
+    const h = harness(on, { context: { window: CONTEXT.window } });
+
+    await $.session.start(STARTED);
+
+    expect(h.events()[0]?.properties).toMatchObject({
+      context_tokens: null,
+      context_window: CONTEXT.window,
+      context_percent: null,
+    });
+  });
+
+  test('a reading that cannot be taken does not cost the event', async ($, on) => {
+    const h = harness(on, { context: 'unavailable' });
+
+    await $.session.start(STARTED);
+
+    expect(h.events().map((e) => e.event_type)).toEqual([
+      'claude_plugin_install',
+      'claude_plugin_active',
+    ]);
+    expect(h.events()[0]?.properties).toMatchObject({
+      context_tokens: null,
+      context_window: null,
+      context_percent: null,
+    });
   });
 
   test('carries the surface and whether a person is at the prompt', async ($, on) => {

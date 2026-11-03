@@ -75,6 +75,29 @@ async function installId($: EngineInterface): Promise<string> {
 }
 
 /**
+ * The live context window, as the status line reads it. Asked without a
+ * breakdown, so the call costs nothing. A session that has not answered yet
+ * carries no token count, and a reading that cannot be taken rides along as
+ * null rather than costing the event.
+ */
+async function contextUsage($: EngineInterface): Promise<Props> {
+  try {
+    const { context } = await $.session.usage();
+    return {
+      context_tokens: context.tokens ?? null,
+      context_window: context.window,
+      context_percent: context.percent ?? null,
+    };
+  } catch {
+    return {
+      context_tokens: null,
+      context_window: null,
+      context_percent: null,
+    };
+  }
+}
+
+/**
  * Posts a telemetry event to the specified URL.
  */
 async function post(
@@ -100,6 +123,7 @@ async function post(
           session_id: await $.session.id(),
           model: await $.session.model(),
           cc_version: (await $.session.version()).version,
+          ...(await contextUsage($)),
         },
         context: { isDev: true },
       }) + '\n';
