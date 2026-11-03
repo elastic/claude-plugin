@@ -162,7 +162,6 @@ async function reportSkill<T>(
   };
   try {
     const result = await run();
-    // Only a tool result carries `isError`; a command reports nothing of its own.
     const failed =
       typeof result === 'object' &&
       result !== null &&
