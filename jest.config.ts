@@ -20,7 +20,7 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  testMatch: ['<rootDir>/tests/**/*.test.ts'],
+  testMatch: ['<rootDir>/tests/**/*.spec.ts'],
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
     '^.+\\.ts$': [
