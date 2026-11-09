@@ -25,12 +25,20 @@ import type { EngineInterface, Register } from 'claude-code';
 const DEFAULT_URL =
   'https://telemetry-staging.elastic.co/v3/send/elastic-claude-plugin';
 
-async function pluginVersion($: EngineInterface): Promise<string> {
-  const plugin_info = await $.fs.read(
-    `${$.plugin.root}/.claude-plugin/plugin.json`,
-  );
-  const parsed: { version?: unknown } = JSON.parse(plugin_info);
-  return typeof parsed.version === 'string' ? parsed.version : 'unknown';
+const versions = new Map<string, Promise<string>>();
+
+function pluginVersion($: EngineInterface): Promise<string> {
+  const path = `${$.plugin.root}/.claude-plugin/plugin.json`;
+  let held = versions.get(path);
+  if (held === undefined) {
+    held = $.fs.read(path).then((info) => {
+      const parsed: { version?: unknown } = JSON.parse(info);
+      return typeof parsed.version === 'string' ? parsed.version : 'unknown';
+    });
+    held.catch(() => versions.delete(path));
+    versions.set(path, held);
+  }
+  return held;
 }
 
 const INSTALL_ID = 'install-id';
@@ -66,11 +74,18 @@ async function endpoint($: EngineInterface): Promise<string | undefined> {
  * One id per install, kept in the plugin's own store, so events from the same
  * machine group without anything about the machine riding along.
  */
+let cachedInstallId: string | undefined;
+
 async function installId($: EngineInterface): Promise<string> {
+  if (cachedInstallId !== undefined) return cachedInstallId;
   const held = await $.store.get(INSTALL_ID);
-  if (typeof held === 'string' && held !== '') return held;
+  if (typeof held === 'string' && held !== '') {
+    cachedInstallId = held;
+    return held;
+  }
   const fresh = crypto.randomUUID();
   await $.store.set(INSTALL_ID, fresh);
+  cachedInstallId = fresh;
   return fresh;
 }
 
@@ -100,6 +115,45 @@ async function contextUsage($: EngineInterface): Promise<Props> {
 /**
  * Posts a telemetry event to the specified URL.
  */
+const sessionProps = new Map<string, Props>();
+
+type Cluster = { id: string; stackVersion: string };
+const UNKNOWN_CLUSTER: Cluster = { id: 'unknown', stackVersion: 'unknown' };
+
+/**
+ * Asks the Elastic CLI which cluster it is pointed at. The CLI is how the
+ * plugin reaches Elasticsearch, so when it is configured this names the
+ * cluster and the stack version. Any failure (no CLI, not configured, not
+ * reachable, not JSON) reads as unknown and never costs the event.
+ */
+async function lookupCluster($: EngineInterface): Promise<Cluster> {
+  try {
+    const { exitCode, stdout } = await $.process.run(
+      ['elastic', 'es', 'info'],
+      { timeoutMs: 5000 },
+    );
+    if (exitCode !== 0) return UNKNOWN_CLUSTER;
+    const info: { cluster_uuid?: unknown; version?: { number?: unknown } } =
+      JSON.parse(stdout);
+    return {
+      id:
+        typeof info.cluster_uuid === 'string' && info.cluster_uuid !== ''
+          ? info.cluster_uuid
+          : UNKNOWN_CLUSTER.id,
+      stackVersion:
+        typeof info.version?.number === 'string' && info.version.number !== ''
+          ? info.version.number
+          : UNKNOWN_CLUSTER.stackVersion,
+    };
+  } catch {
+    return UNKNOWN_CLUSTER;
+  }
+}
+
+let cluster: Promise<Cluster> | undefined;
+const clusterInfo = ($: EngineInterface): Promise<Cluster> =>
+  (cluster ??= lookupCluster($));
+
 async function post(
   $: EngineInterface,
   eventType: string,
@@ -112,15 +166,18 @@ async function post(
 
     const id = await installId($);
     const reported = await pluginVersion($);
+    const target = await clusterInfo($);
+    const sessionId = await $.session.id();
     const body =
       JSON.stringify({
         timestamp: new Date(await $.clock.now()).toISOString(),
         event_type: eventType,
         properties: {
+          ...sessionProps.get(sessionId),
           ...properties,
           install_id: id,
           plugin_version: reported,
-          session_id: await $.session.id(),
+          session_id: sessionId,
           model: await $.session.model(),
           cc_version: (await $.session.version()).version,
           ...(await contextUsage($)),
@@ -132,8 +189,8 @@ async function post(
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-ndjson',
-        'X-Elastic-Cluster-ID': 'unknown',
-        'X-Elastic-Stack-Version': reported,
+        'X-Elastic-Cluster-ID': target.id,
+        'X-Elastic-Stack-Version': target.stackVersion,
       },
       body,
     });
@@ -206,20 +263,20 @@ export const register: Register = (on) => {
   // When a new session starts, post a telemetry event for the install.
   on('session.start', async ($, e, next) => {
     const started = await next(e);
-    const sessionProps: Props = {
+    sessionProps.set(await $.session.id(), {
       surface: e.surface,
       is_interactive: e.isInteractive,
-    };
+    });
 
     if ((await $.store.get(INSTALL_REPORTED)) !== true) {
-      if (await post($, 'claude_plugin_install', sessionProps)) {
+      if (await post($, 'claude_plugin_install', {})) {
         await $.store.set(INSTALL_REPORTED, true);
       }
     }
 
     const today = new Date(await $.clock.now()).toISOString().slice(0, 10);
     if ((await $.store.get(ACTIVE_REPORTED)) !== today) {
-      if (await post($, 'claude_plugin_active', sessionProps)) {
+      if (await post($, 'claude_plugin_active', {})) {
         await $.store.set(ACTIVE_REPORTED, today);
       }
     }

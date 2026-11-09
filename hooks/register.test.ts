@@ -61,6 +61,8 @@ type Harness = {
   /** Lines written to the transcript; telemetry should never add one. */
   transcript: () => string[];
   debug: () => string[];
+  /** Every argv handed to `$.process.run`. */
+  commands: () => string[][];
 };
 
 type Options = {
@@ -83,6 +85,11 @@ type Options = {
    */
   context?:
     { tokens?: number; window: number; percent?: number } | 'unavailable';
+  /**
+   * What `elastic es info` answers; no CLI configured (exit 1) unless given.
+   * `unavailable` makes the call reject, as when the CLI is missing.
+   */
+  cluster?: { exitCode?: number; stdout: string } | 'unavailable';
 };
 
 /**
@@ -95,6 +102,7 @@ function harness(on: On, options: Options = {}): Harness {
   const headers: Record<string, string>[] = [];
   const transcript: string[] = [];
   const debug: string[] = [];
+  const commands: string[][] = [];
 
   const clock = mock.clock(on, { now: options.now ?? NOON });
   mock.store(on, options.store ?? {});
@@ -113,6 +121,20 @@ function harness(on: On, options: Options = {}): Harness {
         startedAt: NOON,
         context: options.context ?? CONTEXT,
         rateLimits: [],
+      },
+    };
+  });
+
+  on('process.run', ($, e) => {
+    commands.push([...e.argv]);
+    if (options.cluster === 'unavailable') throw new Error('no such command');
+    return {
+      value: {
+        exitCode: options.cluster?.exitCode ?? (options.cluster ? 0 : 1),
+        stdout: options.cluster?.stdout ?? '',
+        stderr: '',
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
       },
     };
   });
@@ -160,6 +182,7 @@ function harness(on: On, options: Options = {}): Harness {
     headers: () => headers,
     transcript: () => transcript,
     debug: () => debug,
+    commands: () => commands,
   };
 }
 
@@ -375,17 +398,81 @@ describe('the endpoint', () => {
 });
 
 describe('the envelope the indexer reads', () => {
-  test('sends ndjson, an unknown cluster and the plugin version', async ($, on) => {
+  const ES_INFO = JSON.stringify({
+    cluster_uuid: 'PjeuW2D1Sie9i_lyr4V59Q',
+    version: { number: '9.7.0' },
+  });
+
+  test('sends ndjson, an unknown cluster and stack when no CLI is configured', async ($, on) => {
     const h = harness(on);
 
     await $.session.start(STARTED);
 
+    // Becomes `cluster-uuid` in the envelope. The plugin version is not a
+    // stack version, so it never stands in for one.
     expect(h.headers()[0]).toEqual({
       'Content-Type': 'application/x-ndjson',
-      // Becomes `cluster-uuid` in the envelope; the events come from a laptop.
       'X-Elastic-Cluster-ID': 'unknown',
-      'X-Elastic-Stack-Version': PLUGIN_VERSION,
+      'X-Elastic-Stack-Version': 'unknown',
     });
+  });
+
+  test('names the cluster and stack version the CLI is pointed at', async ($, on) => {
+    const h = harness(on, { cluster: { stdout: ES_INFO } });
+
+    await $.session.start(STARTED);
+
+    expect(h.commands()[0]).toEqual(['elastic', 'es', 'info']);
+    for (const headers of h.headers()) {
+      expect(headers).toMatchObject({
+        'X-Elastic-Cluster-ID': 'PjeuW2D1Sie9i_lyr4V59Q',
+        'X-Elastic-Stack-Version': '9.7.0',
+      });
+    }
+  });
+
+  test('asks the CLI once, not once per event', async ($, on) => {
+    const h = harness(on, { cluster: { stdout: ES_INFO } });
+
+    await $.session.start(STARTED);
+    await $.session.start(STARTED);
+
+    expect(h.events().length).toBeGreaterThan(1);
+    expect(h.commands()).toHaveLength(1);
+  });
+
+  test('a CLI that is missing does not cost the event', async ($, on) => {
+    const h = harness(on, { cluster: 'unavailable' });
+
+    await $.session.start(STARTED);
+
+    expect(h.events().length).toBeGreaterThan(0);
+    expect(h.headers()[0]).toMatchObject({
+      'X-Elastic-Cluster-ID': 'unknown',
+      'X-Elastic-Stack-Version': 'unknown',
+    });
+  });
+
+  test('output that is not JSON reads as unknown', async ($, on) => {
+    const h = harness(on, { cluster: { stdout: 'not json' } });
+
+    await $.session.start(STARTED);
+
+    expect(h.headers()[0]).toMatchObject({
+      'X-Elastic-Cluster-ID': 'unknown',
+      'X-Elastic-Stack-Version': 'unknown',
+    });
+  });
+
+  test('does not run the CLI when opted out', async ($, on) => {
+    const h = harness(on, {
+      cluster: { stdout: ES_INFO },
+      env: { DO_NOT_TRACK: '1' },
+    });
+
+    await $.session.start(STARTED);
+
+    expect(h.commands()).toEqual([]);
   });
 
   test('marks every event as non-production', async ($, on) => {
@@ -431,6 +518,21 @@ describe('skills and commands', () => {
         },
       },
     ]);
+  });
+
+  test('carries the session surface and interactivity on a skill event', async ($, on) => {
+    const h = harness(on, { store: settled() });
+
+    await $.session.start(STARTED);
+    await $.tool.call({ tool: 'Skill', skill: 'elastic:elasticsearch-esql' });
+
+    const skill = h
+      .events()
+      .find((e) => e.event_type === 'claude_plugin_skill_invoked');
+    expect(skill?.properties).toMatchObject({
+      surface: 'terminal',
+      is_interactive: true,
+    });
   });
 
   test('marks a Skill call the tool reported an error for', async ($, on) => {
