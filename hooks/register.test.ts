@@ -34,6 +34,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 type Event = {
   timestamp: string;
+  vendor: string;
   event_type: string;
   properties: Record<string, string | number | boolean | null>;
   context: { isDev: boolean };
@@ -382,8 +383,17 @@ describe('the endpoint', () => {
     await $.session.start(STARTED);
 
     expect(h.urls()[0]).toBe(
-      'https://telemetry-staging.elastic.co/v3/send/elastic-claude-plugin',
+      'https://telemetry-staging.elastic.co/v3/send/elastic-ai-ecosystem',
     );
+  });
+
+  test('tags every event with its vendor', async ($, on) => {
+    const h = harness(on);
+
+    await $.session.start(STARTED);
+
+    expect(h.events().length).toBeGreaterThan(0);
+    for (const event of h.events()) expect(event.vendor).toBe('claude');
   });
 
   test('honours an override', async ($, on) => {

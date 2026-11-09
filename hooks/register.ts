@@ -20,10 +20,14 @@
 import type { EngineInterface, Register } from 'claude-code';
 
 /**
- * Elastic's v3 telemetry ingest, staging channel `elastic-claude-plugin`.
+ * Elastic's v3 telemetry ingest, staging channel `elastic-ai-ecosystem`. The
+ * channel is shared by every AI harness integration, so events say which one
+ * sent them in `vendor`.
  */
 const DEFAULT_URL =
-  'https://telemetry-staging.elastic.co/v3/send/elastic-claude-plugin';
+  'https://telemetry-staging.elastic.co/v3/send/elastic-ai-ecosystem';
+
+const VENDOR = 'claude';
 
 const versions = new Map<string, Promise<string>>();
 
@@ -171,6 +175,7 @@ async function post(
     const body =
       JSON.stringify({
         timestamp: new Date(await $.clock.now()).toISOString(),
+        vendor: VENDOR,
         event_type: eventType,
         properties: {
           ...sessionProps.get(sessionId),
