@@ -47,7 +47,6 @@ function pluginVersion($: EngineInterface): Promise<string> {
 
 const INSTALL_ID = 'install-id';
 const INSTALL_REPORTED = 'install-reported';
-const ACTIVE_REPORTED = 'active-reported';
 
 type Props = Record<string, string | number | boolean | null>;
 
@@ -116,9 +115,7 @@ async function contextUsage($: EngineInterface): Promise<Props> {
   }
 }
 
-/**
- * Posts a telemetry event to the specified URL.
- */
+/** Per-session properties captured at `session.start`, merged into every event. */
 const sessionProps = new Map<string, Props>();
 
 type Cluster = { id: string; stackVersion: string };
@@ -158,6 +155,9 @@ let cluster: Promise<Cluster> | undefined;
 const clusterInfo = ($: EngineInterface): Promise<Cluster> =>
   (cluster ??= lookupCluster($));
 
+/**
+ * Posts a telemetry event to the specified URL.
+ */
 async function post(
   $: EngineInterface,
   eventType: string,
@@ -279,12 +279,7 @@ export const register: Register = (on) => {
       }
     }
 
-    const today = new Date(await $.clock.now()).toISOString().slice(0, 10);
-    if ((await $.store.get(ACTIVE_REPORTED)) !== today) {
-      if (await post($, 'claude_plugin_active', {})) {
-        await $.store.set(ACTIVE_REPORTED, today);
-      }
-    }
+    await post($, 'claude_plugin_active', {});
 
     return started;
   });

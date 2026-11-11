@@ -30,7 +30,6 @@ const CONTEXT = { tokens: 12_000, window: 200_000, percent: 6 };
 
 /** 2026-03-04T05:06:07Z, so the UTC day is unambiguous. */
 const NOON = Date.UTC(2026, 2, 4, 5, 6, 7);
-const DAY = 24 * 60 * 60 * 1000;
 
 type Event = {
   timestamp: string;
@@ -197,9 +196,11 @@ describe('session.start', () => {
       'claude_plugin_active',
     ]);
 
+    // The second start reports active again, but not the install.
     await $.session.start(STARTED);
     expect(h.events().map((e) => e.event_type)).toEqual([
       'claude_plugin_install',
+      'claude_plugin_active',
       'claude_plugin_active',
     ]);
   });
@@ -219,26 +220,16 @@ describe('session.start', () => {
     ]);
   });
 
-  test('reports active once per UTC day', async ($, on) => {
-    const h = harness(on, {
-      store: { 'install-reported': true, 'active-reported': '2026-03-04' },
-    });
+  test('reports active on every session start', async ($, on) => {
+    const h = harness(on, { store: { 'install-reported': true } });
 
     await $.session.start(STARTED);
-    expect(h.events()).toEqual([]);
-  });
-
-  test('reports active again on the next UTC day', async ($, on) => {
-    const h = harness(on, {
-      now: NOON + DAY,
-      store: { 'install-reported': true, 'active-reported': '2026-03-04' },
-    });
-
     await $.session.start(STARTED);
+
     expect(h.events().map((e) => e.event_type)).toEqual([
       'claude_plugin_active',
+      'claude_plugin_active',
     ]);
-    expect(h.events()[0]?.properties.install_id).toEqual(expect.any(String));
   });
 
   test('carries the install id, plugin, session and engine versions', async ($, on) => {
@@ -507,10 +498,9 @@ describe('the envelope the indexer reads', () => {
 });
 
 describe('skills and commands', () => {
-  /** A fresh store that has already reported its install and today. */
+  /** A fresh store that has already reported its install. */
   const settled = () => ({
     'install-reported': true,
-    'active-reported': '2026-03-04',
   });
 
   test('reports a Skill call, with the prefix stripped', async ($, on) => {
@@ -608,7 +598,6 @@ describe('skills and commands', () => {
 describe('skill duration', () => {
   const settled = () => ({
     'install-reported': true,
-    'active-reported': '2026-03-04',
   });
 
   test('carries how long the Skill call took', async ($, on) => {
