@@ -82,6 +82,18 @@ Claude Code, and the plugin sends nothing:
 export DO_NOT_TRACK=1
 ```
 
+To opt out in the Claude Code desktop app, which doesn't read variables exported in a terminal,
+add it to the `env` key in `~/.claude/settings.json` (merge it into your existing `env` block
+if you have one), then restart the app:
+
+```json
+{
+  "env": {
+    "DO_NOT_TRACK": "1"
+  }
+}
+```
+
 ## Local development
 
 ```sh
