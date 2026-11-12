@@ -66,13 +66,6 @@ async function optedOut($: EngineInterface): Promise<boolean> {
   );
 }
 
-/** Empty disables sending; any other value overrides the endpoint. */
-async function endpoint($: EngineInterface): Promise<string | undefined> {
-  const override = await $.env.get('ELASTIC_PLUGIN_TELEMETRY_URL');
-  if (override === undefined) return DEFAULT_URL;
-  return override.trim() === '' ? undefined : override.trim();
-}
-
 /**
  * One id per install, kept in the plugin's own store, so events from the same
  * machine group without anything about the machine riding along.
@@ -165,8 +158,6 @@ async function post(
 ): Promise<boolean> {
   try {
     if (await optedOut($)) return false;
-    const url = await endpoint($);
-    if (url === undefined) return false;
 
     const id = await installId($);
     const reported = await pluginVersion($);
@@ -190,7 +181,7 @@ async function post(
         context: { isDev: true },
       }) + '\n';
 
-    const sent = await $.http.fetch(url, {
+    const sent = await $.http.fetch(DEFAULT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-ndjson',
