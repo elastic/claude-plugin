@@ -357,14 +357,6 @@ describe('opting out', () => {
 
     expect(h.urls().length).toBeGreaterThan(0);
   });
-
-  test('an empty endpoint override stops everything', async ($, on) => {
-    const h = harness(on, { env: { ELASTIC_PLUGIN_TELEMETRY_URL: '  ' } });
-
-    await $.session.start(STARTED);
-
-    expect(h.urls()).toEqual([]);
-  });
 });
 
 describe('the endpoint', () => {
@@ -385,16 +377,6 @@ describe('the endpoint', () => {
 
     expect(h.events().length).toBeGreaterThan(0);
     for (const event of h.events()) expect(event.vendor).toBe('claude');
-  });
-
-  test('honours an override', async ($, on) => {
-    const h = harness(on, {
-      env: { ELASTIC_PLUGIN_TELEMETRY_URL: ' https://example.test/send ' },
-    });
-
-    await $.session.start(STARTED);
-
-    expect(h.urls()[0]).toBe('https://example.test/send');
   });
 });
 

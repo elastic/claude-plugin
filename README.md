@@ -87,4 +87,3 @@ export DO_NOT_TRACK=1
 ```sh
 claude --plugin-dir /path/to/claude-plugin
 ```
-
