@@ -9,7 +9,7 @@ and Cloud.
 .claude-plugin/plugin.json   # Plugin manifest (skills array auto-generated)
 .mcp.json                    # MCP server configurations
 skills/                      # Synced from elastic/agent-skills on each release
-hooks/                       # Authored directly in this repo (telemetry)
+hooks/                       # Authored directly in this repo
 agents/                      # Authored directly in this repo (future)
 ```
 
