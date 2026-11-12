@@ -40,7 +40,7 @@ Authored directly in this repo. The sync never touches these directories.
 
 ## Telemetry
 
-The plugin sends anonymous usage data to Elastic to help us find issues and improve the
+The plugin sends usage data to Elastic to help us find issues and improve the
 experience. Events are currently sent to Elastic's staging telemetry cluster.
 
 ### What is collected
