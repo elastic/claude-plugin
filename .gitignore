@@ -17,3 +17,6 @@ dist/
 
 # Logs
 *.log
+
+# Claude Code engine-generated hook types (written when a session loads the plugin)
+.claude-plugin/types/
