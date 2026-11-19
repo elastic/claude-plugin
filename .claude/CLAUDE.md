@@ -37,7 +37,14 @@ bash scripts/generate-skills-list.sh
 
 # Test locally
 claude --plugin-dir /path/to/claude-plugin
+
+# Type-check the hooks module (local only; not in CI)
+npm run typecheck:hooks
 ```
+
+`typecheck:hooks` needs the hook API types the Claude Code engine writes to `.claude-plugin/types/` (gitignored) when an interactive session loads the plugin; no command generates them, and headless `claude -p` runs don't write them. `claude plugin validate` does not type-check the hooks module, so run this after changing `hooks/`.
+
+Hooks tests live in `hooks/*.test.ts` (run by `npm run test:hooks`). Repo tests live in `test/`, not `tests/`: the validator treats a top-level `tests/` folder as hooks test code and type-checks it in the hooks environment.
 
 ## Commit attribution
 

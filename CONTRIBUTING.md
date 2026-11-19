@@ -29,6 +29,12 @@ npm run validate
 claude --plugin-dir /path/to/claude-plugin
 ```
 
+If you change `hooks/`, also run `npm run typecheck:hooks`. It is not run in
+CI because it needs Claude Code's hook API types, which the Claude Code engine
+writes to `.claude-plugin/types/` (gitignored) when an interactive session
+loads the plugin; there is no command that generates them.
+(`claude plugin validate` does not type-check the hooks module.)
+
 ## Making changes
 
 1. Create a branch from `main` (use `origin` or a personal fork).
