@@ -23,7 +23,7 @@ npm install
 # Run checks locally (same as CI)
 npm run lint
 npm test
-claude plugin validate --strict .
+npm run validate
 
 # Test the plugin with Claude Code
 claude --plugin-dir /path/to/claude-plugin
@@ -33,7 +33,7 @@ claude --plugin-dir /path/to/claude-plugin
 
 1. Create a branch from `main` (use `origin` or a personal fork).
 2. Make your changes.
-3. Ensure `npm run lint`, `npm test`, and `claude plugin validate --strict .`
+3. Ensure `npm run lint`, `npm test`, and `npm run validate`
    all pass.
 4. Open a PR against `main`.
 

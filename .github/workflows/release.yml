@@ -86,11 +86,12 @@ jobs:
           jq --arg v "$INPUT_VERSION" '.version = $v' .claude-plugin/plugin.json > tmp.json
           mv tmp.json .claude-plugin/plugin.json
 
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+      # Claude Code CLI is pinned in package.json devDependencies.
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate plugin
-        run: claude plugin validate --strict .
+        run: npm run validate
 
       - name: Stamp changelog
         env:

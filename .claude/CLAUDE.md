@@ -24,7 +24,7 @@ Elastic's official Claude Code plugin (`elastic/claude-plugin`). It bundles skil
 npm install
 
 # Validate the plugin (same check CI runs)
-claude plugin validate --strict .
+npm run validate
 
 # Run tests
 npm test
@@ -51,7 +51,7 @@ Assisted-by: Claude Code <noreply@anthropic.com>
 
 Seven workflows:
 
-1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push/PR to `main` and `stable`, and daily cron.
+1. **CI** (`ci.yml`) — validates the plugin (`npm run validate`), runs lint (`eslint`), and runs tests (`jest`) on push/PR to `main` and `stable`, and daily cron.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
 4. **Auto-approve Renovate** (`auto-approve-renovate-prs.yml`) — auto-approves Renovate dependency PRs with the `renovate-auto-approve` label.

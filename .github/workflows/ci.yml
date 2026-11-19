@@ -45,11 +45,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
-
+      # Claude Code CLI is pinned in package.json devDependencies so validator
+      # changes arrive as reviewable Renovate PRs instead of breaking main.
       - name: Validate plugin
-        run: claude plugin validate --strict .
+        run: npm run validate
 
       - name: Test hooks
         run: npm run test:hooks
