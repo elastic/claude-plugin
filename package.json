@@ -7,8 +7,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test:hooks": "claude plugin test .",
-    "typecheck:hooks": "tsc -p hooks/tsconfig.json",
-    "validate": "claude plugin validate --strict ."
+    "typecheck:hooks": "tsc -p hooks/tsconfig.json"
   },
   "devDependencies": {
     "@anthropic-ai/claude-code": "2.1.328",

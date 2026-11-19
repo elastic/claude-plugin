@@ -91,7 +91,7 @@ jobs:
         run: npm ci
 
       - name: Validate plugin
-        run: npm run validate
+        run: npx --no-install claude plugin validate --strict .
 
       - name: Stamp changelog
         env:

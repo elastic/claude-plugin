@@ -48,7 +48,7 @@ jobs:
       # Claude Code CLI is pinned in package.json devDependencies so validator
       # changes arrive as reviewable Renovate PRs instead of breaking main.
       - name: Validate plugin
-        run: npm run validate
+        run: npx --no-install claude plugin validate --strict .
 
       - name: Test hooks
         run: npm run test:hooks
