@@ -10,6 +10,7 @@
     "typecheck:hooks": "tsc -p hooks/tsconfig.json"
   },
   "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.328",
     "@eslint/js": "10.0.1",
     "@jest/globals": "30.5.2",
     "@types/node": "26.6.6",
@@ -19,5 +20,9 @@
     "ts-jest": "29.4.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1"
+  },
+  "allowScripts": {
+    "@anthropic-ai/claude-code": true,
+    "@parcel/watcher": false
   }
 }
