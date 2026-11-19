@@ -42,7 +42,7 @@ claude --plugin-dir /path/to/claude-plugin
 npm run typecheck:hooks
 ```
 
-`typecheck:hooks` needs the hook API types the Claude Code engine writes to `.claude-plugin/types/` (gitignored) when an interactive session loads the plugin; no command generates them, and headless `claude -p` runs don't write them. `claude plugin validate` does not type-check the hooks module, so run this after changing `hooks/`.
+`claude plugin validate` (CLI 2.1.328+) type-checks the hooks module, so CI covers type errors in `hooks/`. `typecheck:hooks` is the same check against `hooks/tsconfig.json`, for local use; it needs the hook API types the Claude Code engine writes to `.claude-plugin/types/` (gitignored) when an interactive session loads the plugin. No command generates them, and headless `claude -p` runs don't write them.
 
 Hooks tests live in `hooks/*.test.ts` (run by `npm run test:hooks`). Repo tests live in `test/`, not `tests/`: the validator treats a top-level `tests/` folder as hooks test code and type-checks it in the hooks environment.
 

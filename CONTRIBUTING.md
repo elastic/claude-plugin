@@ -29,11 +29,12 @@ claude plugin validate --strict .
 claude --plugin-dir /path/to/claude-plugin
 ```
 
-If you change `hooks/`, also run `npm run typecheck:hooks`. It is not run in
-CI because it needs Claude Code's hook API types, which the Claude Code engine
-writes to `.claude-plugin/types/` (gitignored) when an interactive session
-loads the plugin; there is no command that generates them.
-(`claude plugin validate` does not type-check the hooks module.)
+`claude plugin validate` (Claude Code 2.1.328 and later) type-checks the hooks
+module, so CI catches type errors in `hooks/`. `npm run typecheck:hooks` runs
+the same check with `hooks/tsconfig.json`; it is local only because it needs
+Claude Code's hook API types, which the Claude Code engine writes to
+`.claude-plugin/types/` (gitignored) when an interactive session loads the
+plugin. No command generates them.
 
 ## Making changes
 
