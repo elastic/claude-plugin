@@ -41,8 +41,11 @@ jobs:
 
       # Unpinned on purpose: stable has no package.json to pin it in, and the
       # Release workflow has already validated this tree with the pinned CLI.
+      # --allow-scripts: the package's postinstall puts the real binary in
+      # place. npm only warns about unapproved install scripts today; once it
+      # skips them, `claude` would be a stub that exits 1.
       - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code
 
       - name: Validate plugin
         run: claude plugin validate --strict .

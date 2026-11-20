@@ -81,6 +81,7 @@ if ! git merge-base --is-ancestor "$prev_commit" "$base_ref"; then
   exit 1
 fi
 
+start_ref="$(git symbolic-ref -q --short HEAD || git rev-parse HEAD)"
 git checkout -q -b "$branch" "$base_ref"
 
 jq --arg v "$version" '.version = $v' "$PLUGIN_JSON" >"${PLUGIN_JSON}.tmp"
@@ -115,4 +116,13 @@ git commit -q -m "release: v${version}"
 git rm -q package.json package-lock.json
 git commit -q -m "chore: strip dev package manifests for stable"
 
-git merge -q --no-edit "$stable_ref"
+# git reports conflicts on stdout only. Say which files, then put the checkout
+# back the way it was so the release can be cut again once they are resolved.
+if ! git merge -q --no-edit "$stable_ref" >/dev/null; then
+  conflicts="$(git diff --name-only --diff-filter=U | tr '\n' ' ')"
+  git merge --abort
+  git checkout -q "$start_ref"
+  git branch -q -D "$branch"
+  echo "Merging ${stable_ref} into ${branch} hit a conflict in: ${conflicts}- stable has changes that main does not. Reconcile the two branches, then cut v${version} again." >&2
+  exit 1
+fi

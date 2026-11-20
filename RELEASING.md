@@ -24,6 +24,16 @@ in `plugin.json` — the workflow owns that.
 Both workflows try to enable auto-merge with the merge-commit method on the PR
 they open. If that fails they log a warning, and the method is yours to pick.
 
+## Checks on release and backport PRs
+
+- **Required check on `stable`.** Branch protection for `stable` must require
+  `Release Validation` (from `release-ci.yml`) and nothing from `ci.yml`. The
+  `Lint & Test` and `Plugin Validation` checks run on `main` only, so a release
+  PR that still requires them can never be merged.
+- **Checks that do not start.** Both PRs are opened by `github-actions[bot]`.
+  If their checks have not started, a maintainer has to approve the workflow
+  runs on the PR page. Auto-merge waits for those checks and for a review.
+
 ## Why `stable` has no `package.json`
 
 Claude Code installs a plugin's packages by itself when `package.json` and a

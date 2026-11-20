@@ -306,6 +306,31 @@ describe('cut-release-branch.sh', () => {
     expect(branchExists(repo, releaseBranch('0.3.0'))).toBe(false);
   });
 
+  it('names the conflicting files and removes the branch when stable does not merge', () => {
+    const repo = makeRepo();
+    cut(repo, '0.2.0');
+    mergeRelease(repo, '0.2.0');
+    backport(repo, '0.2.0', 'merge');
+    // The same file added on both branches, with different content.
+    git(repo, 'checkout', '-q', 'stable');
+    write(repo, 'hotfix.txt', 'from stable\n');
+    git(repo, 'add', 'hotfix.txt');
+    git(repo, 'commit', '-q', '-m', 'fix: hotfix on stable');
+    git(repo, 'checkout', '-q', 'main');
+    write(repo, 'hotfix.txt', 'from main\n');
+    git(repo, 'add', 'hotfix.txt');
+    git(repo, 'commit', '-q', '-m', 'fix: same file on main');
+
+    const result = cut(repo, '0.3.0');
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('conflict');
+    expect(result.stderr).toContain('hotfix.txt');
+    expect(branchExists(repo, releaseBranch('0.3.0'))).toBe(false);
+    expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
   it('refuses to overwrite an existing release branch', () => {
     const repo = makeRepo();
     cut(repo, '0.2.0');
