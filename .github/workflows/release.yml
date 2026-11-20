@@ -79,58 +79,34 @@ jobs:
             exit 1
           fi
 
-      - name: Bump version in plugin.json
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          jq --arg v "$INPUT_VERSION" '.version = $v' .claude-plugin/plugin.json > tmp.json
-          mv tmp.json .claude-plugin/plugin.json
-
-      # Claude Code CLI is pinned in package.json devDependencies.
+      # Installs the Claude Code CLI pinned in package.json devDependencies.
+      # This has to run before the release branch is cut, because cutting it
+      # removes package.json and the lockfile.
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate plugin
-        run: npx --no-install claude plugin validate --strict .
-
-      - name: Stamp changelog
+      # Commits the version bump and changelog stamp, then removes
+      # package.json and package-lock.json so they never reach stable.
+      - name: Cut release branch
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          python3 - <<'PYEOF'
-          import os, re
-          from datetime import date
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          bash scripts/cut-release-branch.sh "$INPUT_VERSION"
 
-          version = os.environ["INPUT_VERSION"]
-          today = date.today().isoformat()
+      - name: Validate stripped plugin
+        run: ./node_modules/.bin/claude plugin validate --strict .
 
-          with open("CHANGELOG.md", "r") as f:
-              content = f.read()
+      - name: Test hooks on stripped plugin
+        run: ./node_modules/.bin/claude plugin test .
 
-          if "## [Unreleased]" not in content:
-              exit(0)
-
-          content = content.replace(
-              "## [Unreleased]",
-              f"## [Unreleased]\n\n## [{version}] - {today}",
-              1,
-          )
-
-          with open("CHANGELOG.md", "w") as f:
-              f.write(content)
-          PYEOF
-
-      - name: Create release branch and PR
+      - name: Open release PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_VERSION: ${{ inputs.version }}
         run: |
           branch="automation/release-v${INPUT_VERSION}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$branch"
-          git add .claude-plugin/plugin.json CHANGELOG.md
-          git commit -m "release: v${INPUT_VERSION}"
           git push origin "$branch"
 
           gh pr create \
