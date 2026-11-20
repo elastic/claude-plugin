@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   backport:
-    name: Sync main with stable
+    name: Backport release commit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -28,6 +28,9 @@ jobs:
           version=$(jq -r '.version' .claude-plugin/plugin.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # Brings the "release: vX" commit itself to main, so main and stable
+      # share it. Never merge stable into main: stable has package.json and
+      # the lockfile removed, and that merge would delete them from main.
       - name: Create backport PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,9 +38,16 @@ jobs:
         run: |
           branch="automation/backport-v${VERSION}"
 
-          # Check if main is already up to date with stable
-          if git merge-base --is-ancestor stable origin/main 2>/dev/null; then
-            echo "main is already up to date with stable, nothing to backport"
+          # --no-merges: the merge commit of the release PR repeats the PR
+          # title in its body, so it matches the same pattern.
+          release_commit=$(git log --format=%H -1 --no-merges --grep="^release: v${VERSION//./\\.}$" HEAD)
+          if [ -z "$release_commit" ]; then
+            echo "::error::No 'release: v${VERSION}' commit found on stable"
+            exit 1
+          fi
+
+          if git merge-base --is-ancestor "$release_commit" origin/main; then
+            echo "main already has release commit $release_commit, nothing to backport"
             exit 0
           fi
 
@@ -48,14 +58,23 @@ jobs:
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch" stable
-          git push --force-with-lease origin "$branch"
+          git push --force-with-lease origin "${release_commit}:refs/heads/${branch}"
+
+          {
+            echo "Brings the \`release: v${VERSION}\` commit from \`stable\` to \`main\` (version bump and changelog stamp)."
+            echo
+            echo "**Merge this with a merge commit. Do not squash or rebase.**"
+            echo "\`main\` and \`stable\` must share this exact commit. If they do not, the next release is blocked."
+          } > "$RUNNER_TEMP/backport-body.md"
 
           gh pr create \
             --base main \
             --head "$branch" \
             --title "chore: backport release v${VERSION} to main" \
-            --body "Syncs main with the v${VERSION} release on stable so both branches share the same history." \
+            --body-file "$RUNNER_TEMP/backport-body.md" \
             --label "skip-changelog"
+
+          # Fix the merge method up front so the PR cannot be squashed by habit.
+          if ! gh pr merge --auto --merge "$branch"; then
+            echo "::warning::Could not enable auto-merge. Merge the backport PR by hand with a merge commit."
+          fi
