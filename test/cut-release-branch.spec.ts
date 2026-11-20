@@ -343,6 +343,41 @@ describe('cut-release-branch.sh', () => {
     expect(git(repo, 'rev-parse', releaseBranch('0.2.0'))).toBe(before);
   });
 
+  it.each([
+    ['staged', true],
+    ['unstaged', false],
+  ])(
+    'refuses to cut over %s changes and leaves them in place',
+    (_name, stage) => {
+      const repo = makeRepo();
+      write(repo, 'package.json', '{"private":true,"wip":true}\n');
+      if (stage) {
+        git(repo, 'add', 'package.json');
+      }
+      const before = git(repo, 'status', '--porcelain');
+
+      const result = cut(repo, '0.2.0');
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain('uncommitted changes');
+      expect(branchExists(repo, releaseBranch('0.2.0'))).toBe(false);
+      expect(git(repo, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main');
+      expect(git(repo, 'status', '--porcelain')).toBe(before);
+    },
+  );
+
+  it('ignores untracked files', () => {
+    const repo = makeRepo();
+    write(repo, 'notes.txt', 'scratch\n');
+
+    const result = cut(repo, '0.2.0');
+
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(read(repo, 'notes.txt')).toBe('scratch\n');
+    expect(git(repo, 'ls-files', 'notes.txt')).toBe('');
+  });
+
   it('leaves the changelog alone when it has no Unreleased section', () => {
     const repo = makeRepo('# Changelog\n');
 

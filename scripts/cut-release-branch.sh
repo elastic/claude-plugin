@@ -59,6 +59,14 @@ stable_ref="${STABLE_REF:-origin/stable}"
 release_date="${RELEASE_DATE:-$(date +%F)}"
 branch="automation/release-v${version}"
 
+# Staged changes would ride along into the release commit, and the cleanup
+# after a failed merge of stable would then throw them away with the branch.
+# Untracked files are left alone: nothing here commits them.
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  echo "The checkout has uncommitted changes to tracked files. Commit or stash them before cutting v${version}." >&2
+  exit 1
+fi
+
 if git rev-parse --verify --quiet "refs/heads/${branch}" >/dev/null; then
   echo "Branch ${branch} already exists. Delete it before cutting v${version} again." >&2
   exit 1
