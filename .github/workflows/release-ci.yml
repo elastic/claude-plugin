@@ -1,0 +1,51 @@
+name: Release CI
+
+# Checks for the stable branch, the one the Claude plugin directory serves.
+# stable has no package.json or lockfile, so the main CI workflow cannot run
+# there. Lint and unit tests have already run on main for the same content.
+
+on:
+  push:
+    branches: [stable]
+  pull_request:
+    branches: [stable]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    # Branch protection on stable requires this check by name.
+    name: Release Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: '.nvmrc'
+
+      # Claude Code installs a plugin's packages when package.json and a
+      # lockfile sit at the plugin root, and the plugin directory holds such
+      # releases for review. Ours are dev tooling and must stay on main.
+      - name: Reject package manifests
+        run: |
+          found=0
+          for file in package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml; do
+            if [ -e "$file" ]; then
+              echo "::error::$file must not be on stable"
+              found=1
+            fi
+          done
+          exit "$found"
+
+      # Unpinned on purpose: stable has no package.json to pin it in, and the
+      # Release workflow has already validated this tree with the pinned CLI.
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin
+        run: claude plugin validate --strict .
+
+      - name: Test hooks
+        run: claude plugin test .
