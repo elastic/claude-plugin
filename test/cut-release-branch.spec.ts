@@ -141,6 +141,24 @@ function mergeRelease(repo: string, version: string): void {
   );
 }
 
+/**
+ * The release PR landing on `stable` through "Squash and merge": one new
+ * commit titled with the PR number, so no `release: vX` commit reaches stable.
+ */
+function squashRelease(repo: string, version: string): void {
+  git(repo, 'checkout', '-q', 'stable');
+  git(repo, 'merge', '-q', '--squash', releaseBranch(version));
+  git(
+    repo,
+    'commit',
+    '-q',
+    '-m',
+    `release: v${version} (#1)`,
+    '-m',
+    `* release: v${version}\n\n* ${STRIP_SUBJECT}`,
+  );
+}
+
 function releaseCommit(repo: string, ref: string, version: string): string {
   return git(
     repo,
@@ -271,6 +289,20 @@ describe('cut-release-branch.sh', () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('merge commit');
     expect(result.stderr).toContain('v0.2.0');
+    expect(branchExists(repo, releaseBranch('0.3.0'))).toBe(false);
+  });
+
+  it('refuses to cut when the previous release PR was squashed into stable', () => {
+    const repo = makeRepo();
+    cut(repo, '0.2.0');
+    squashRelease(repo, '0.2.0');
+    developOnMain(repo);
+
+    const result = cut(repo, '0.3.0');
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("No 'release: v0.2.0' commit on stable");
+    expect(result.stderr).toContain('merge commit');
     expect(branchExists(repo, releaseBranch('0.3.0'))).toBe(false);
   });
 

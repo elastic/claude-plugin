@@ -64,14 +64,19 @@ if git rev-parse --verify --quiet "refs/heads/${branch}" >/dev/null; then
   exit 1
 fi
 
-# The previous release commit must already be on main. If its backport PR was
-# skipped, squashed, or cherry-picked, main holds the same changes under a
-# different commit and the merge of stable below conflicts.
+# The previous release commit must be on both stable and main. If the release
+# PR or its backport PR was squashed, rebased, or cherry-picked, one branch
+# holds the same changes under a different commit and the merge of stable
+# below conflicts.
 prev="$(git show "${stable_ref}:${PLUGIN_JSON}" | jq -r '.version')"
 # --no-merges: GitHub copies the PR title into the merge commit's body, so the
 # merge of the release PR also carries a "release: vX" line.
 prev_commit="$(git log "$stable_ref" --format=%H -1 --no-merges --grep="^release: v${prev//./\\.}$")"
-if [ -n "$prev_commit" ] && ! git merge-base --is-ancestor "$prev_commit" "$base_ref"; then
+if [ -z "$prev_commit" ]; then
+  echo "No 'release: v${prev}' commit on stable. The v${prev} release PR was probably squashed or rebased; it has to be merged with a merge commit. main and stable no longer share that release and must be reconciled by hand before releasing (see RELEASING.md)." >&2
+  exit 1
+fi
+if ! git merge-base --is-ancestor "$prev_commit" "$base_ref"; then
   echo "Release commit ${prev_commit} (v${prev}) is on stable but not on main. Merge the v${prev} backport PR with a merge commit (not squash) before releasing." >&2
   exit 1
 fi

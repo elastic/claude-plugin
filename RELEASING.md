@@ -14,12 +14,15 @@ in `plugin.json` — the workflow owns that.
    `package-lock.json` (see [Why `stable` has no `package.json`](#why-stable-has-no-packagejson)).
    It validates the result and opens a release PR into `stable` with the
    `skip-changelog` label.
-4. Review and merge the release PR. Its required check is `Release Validation`.
+4. Review and merge the release PR **with a merge commit**. Its required check
+   is `Release Validation`.
 5. On merge, the **Tag Release** workflow automatically creates the git tag
    (`elastic--v{version}`) and a GitHub Release.
 6. The **Backport Release** workflow opens a PR that brings the
    `release: v{version}` commit to `main`. Merge it **with a merge commit**.
-   Auto-merge is set to that method for you.
+
+Both workflows try to enable auto-merge with the merge-commit method on the PR
+they open. If that fails they log a warning, and the method is yours to pick.
 
 ## Why `stable` has no `package.json`
 
@@ -31,11 +34,14 @@ tests, and the pinned Claude Code CLI.
 
 ## Two rules that keep `main` and `stable` mergeable
 
-1. **Never squash, rebase, or cherry-pick the backport PR.** `main` and `stable`
-   must share the exact `release: v{version}` commit. If they do not, the
-   Release workflow refuses to cut the next release. To recover, open a PR that
-   merges that commit from `stable` into `main` and merge it with a merge
-   commit.
+1. **Never squash, rebase, or cherry-pick the release PR or the backport PR.**
+   `main` and `stable` must share the exact `release: v{version}` commit. If
+   they do not, the Release workflow refuses to cut the next release.
+   - Backport PR squashed or skipped: open a PR that merges that commit from
+     `stable` into `main`, and merge it with a merge commit.
+   - Release PR squashed or rebased into `stable`: the commit no longer exists
+     on `stable`, so there is no scripted recovery. The two branches have to be
+     reconciled by hand.
 2. **Never merge `stable` into `main`.** `stable` has `package.json` and
    `package-lock.json` deleted, and that merge deletes them from `main` too.
 

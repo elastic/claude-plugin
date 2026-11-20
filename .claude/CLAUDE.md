@@ -77,7 +77,7 @@ Releases are triggered manually via the Release workflow (`Actions` → `Release
 
 Two rules keep the branches mergeable:
 
-- Merge the backport PR with a merge commit. Never squash, rebase, or cherry-pick it: `main` and `stable` must share that exact commit, and `cut-release-branch.sh` refuses the next release if they do not.
+- Merge the release PR and the backport PR with a merge commit. Never squash, rebase, or cherry-pick either: `main` and `stable` must share that exact commit, and `cut-release-branch.sh` refuses the next release if they do not.
 - Never merge `stable` into `main`. That deletes `package.json` and `package-lock.json` from `main`.
 
 Do not manually bump `plugin.json` `version` — the workflow owns that. Do not push directly to `stable` — it should only advance via release PRs. Tag format: `elastic--v{version}`.
