@@ -122,10 +122,23 @@ function releaseBranch(version: string): string {
   return `automation/release-v${version}`;
 }
 
-/** The release PR merging into `stable`. */
+/**
+ * The release PR merging into `stable`. GitHub puts the PR title in the body
+ * of the merge commit, so the merge carries a `release: vX` line of its own.
+ */
 function mergeRelease(repo: string, version: string): void {
   git(repo, 'checkout', '-q', 'stable');
-  git(repo, 'merge', '-q', '--no-ff', '--no-edit', releaseBranch(version));
+  git(
+    repo,
+    'merge',
+    '-q',
+    '--no-ff',
+    '-m',
+    `Merge pull request #1 from elastic/${releaseBranch(version)}`,
+    '-m',
+    `release: v${version}`,
+    releaseBranch(version),
+  );
 }
 
 function releaseCommit(repo: string, ref: string, version: string): string {
@@ -135,6 +148,7 @@ function releaseCommit(repo: string, ref: string, version: string): string {
     ref,
     '--format=%H',
     '-1',
+    '--no-merges',
     `--grep=^release: v${version.replaceAll('.', '\\.')}$`,
   );
 }

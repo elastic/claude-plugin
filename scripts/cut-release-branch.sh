@@ -68,7 +68,9 @@ fi
 # skipped, squashed, or cherry-picked, main holds the same changes under a
 # different commit and the merge of stable below conflicts.
 prev="$(git show "${stable_ref}:${PLUGIN_JSON}" | jq -r '.version')"
-prev_commit="$(git log "$stable_ref" --format=%H -1 --grep="^release: v${prev//./\\.}$")"
+# --no-merges: GitHub copies the PR title into the merge commit's body, so the
+# merge of the release PR also carries a "release: vX" line.
+prev_commit="$(git log "$stable_ref" --format=%H -1 --no-merges --grep="^release: v${prev//./\\.}$")"
 if [ -n "$prev_commit" ] && ! git merge-base --is-ancestor "$prev_commit" "$base_ref"; then
   echo "Release commit ${prev_commit} (v${prev}) is on stable but not on main. Merge the v${prev} backport PR with a merge commit (not squash) before releasing." >&2
   exit 1
