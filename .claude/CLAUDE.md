@@ -64,7 +64,7 @@ Eight workflows:
 4. **Auto-approve Renovate** (`auto-approve-renovate-prs.yml`) — auto-approves Renovate dependency PRs with the `renovate-auto-approve` label.
 5. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), then runs `scripts/cut-release-branch.sh`, which commits the `plugin.json` bump and changelog stamp (`release: vX`), commits the removal of `package.json` and `package-lock.json`, and merges `stable`. It validates and tests that stripped tree with the pinned CLI, then opens a PR targeting `stable` with `skip-changelog`.
 6. **Tag Release** (`release-tag.yml`) — fires on push to `stable` when `plugin.json` changes. Creates the git tag (`{name}--v{version}`) and GitHub Release after the release PR merges.
-7. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR that merges the `release: vX` commit itself into `main`, with auto-merge set to the merge-commit method. It does not merge `stable` into `main`.
+7. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR that merges the `release: vX` commit itself into `main`; a maintainer merges it with a merge commit. It does not merge `stable` into `main`.
 8. **Release CI** (`release-ci.yml`) — runs on push/PR to `stable`. Its `Release Validation` job fails if a `package.json` or any lockfile is at the root, then runs `claude plugin validate --strict .` and `claude plugin test .` with the latest (unpinned) CLI.
 
 ## Branching and releases

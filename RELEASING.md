@@ -21,8 +21,11 @@ in `plugin.json` — the workflow owns that.
 6. The **Backport Release** workflow opens a PR that brings the
    `release: v{version}` commit to `main`. Merge it **with a merge commit**.
 
-Both workflows try to enable auto-merge with the merge-commit method on the PR
-they open. If that fails they log a warning, and the method is yours to pick.
+Both PRs are always merged by a maintainer; neither workflow enables
+auto-merge. A merge performed by a workflow's `GITHUB_TOKEN` pushes to `stable`
+without starting other workflows, so neither **Tag Release** nor
+**Backport Release** would run. Nothing in the workflows picks the merge method
+for you, so choose **Create a merge commit** each time.
 
 ## Checks on release and backport PRs
 
@@ -32,7 +35,7 @@ they open. If that fails they log a warning, and the method is yours to pick.
   PR that still requires them can never be merged.
 - **Checks that do not start.** Both PRs are opened by `github-actions[bot]`.
   If their checks have not started, a maintainer has to approve the workflow
-  runs on the PR page. Auto-merge waits for those checks and for a review.
+  runs on the PR page.
 
 ## Why `stable` has no `package.json`
 

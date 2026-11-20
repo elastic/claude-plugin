@@ -116,8 +116,6 @@ jobs:
             --body "Automated release PR for v${INPUT_VERSION}. Merging this will update the published plugin. Merge with a merge commit; do not squash or rebase." \
             --label "skip-changelog"
 
-          # main and stable must share the "release: vX" commit, so this PR
-          # has to land as a merge commit. Fix the method up front.
-          if ! gh pr merge --auto --merge "$branch"; then
-            echo "::warning::Could not enable auto-merge. Merge the release PR by hand with a merge commit, never squash or rebase."
-          fi
+          # No auto-merge here. A merge that GITHUB_TOKEN sets up pushes to
+          # stable without starting other workflows, so Tag Release and
+          # Backport Release would never run. A maintainer merges this PR.
