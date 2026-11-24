@@ -1,3 +1,5 @@
+## THIS IS A TEST FOR LIBRA!! DO NOT MERGE 
+
 # Elastic's official Claude plugin
 
 Umbrella plugin for the Elastic stack — Elasticsearch, Kibana, Observability, Security,
