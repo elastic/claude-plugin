@@ -8,11 +8,63 @@ in `plugin.json` — the workflow owns that.
 1. Go to **Actions** → **Release** → **Run workflow**.
 2. Enter the target version (e.g. `0.1.0`). Must be a single logical bump
    (patch, minor, or major) from the current version.
-3. The workflow validates the version, bumps `plugin.json`, stamps the
-   changelog, and opens a release PR with the `skip-changelog` label.
-4. Review and merge the release PR.
+3. The workflow validates the version, then builds the release branch as two
+   commits: one that bumps `plugin.json` and stamps the changelog
+   (`release: v{version}`), and one that removes `package.json` and
+   `package-lock.json` (see [Why `stable` has no `package.json`](#why-stable-has-no-packagejson)).
+   It validates the result and opens a release PR into `stable` with the
+   `skip-changelog` label.
+4. Review and merge the release PR **with a merge commit**. Its required check
+   is `Release Validation`.
 5. On merge, the **Tag Release** workflow automatically creates the git tag
    (`elastic--v{version}`) and a GitHub Release.
+6. The **Backport Release** workflow opens a PR that brings the
+   `release: v{version}` commit to `main`. Merge it **with a merge commit**.
+
+Both PRs are always merged by a maintainer; neither workflow enables
+auto-merge. A merge performed by a workflow's `GITHUB_TOKEN` pushes to `stable`
+without starting other workflows, so neither **Tag Release** nor
+**Backport Release** would run. Nothing in the workflows picks the merge method
+for you, so choose **Create a merge commit** each time.
+
+## Checks on release and backport PRs
+
+- **Required check on `stable`.** Branch protection for `stable` must require
+  `Release Validation` (from `release-ci.yml`) and nothing from `ci.yml`. The
+  `Lint & Test` and `Plugin Validation` checks run on `main` only, so a release
+  PR that still requires them can never be merged.
+- **Checks that do not start.** Both PRs are opened by `github-actions[bot]`.
+  If their checks have not started, a maintainer has to approve the workflow
+  runs on the PR page.
+
+## Why `stable` has no `package.json`
+
+Claude Code installs a plugin's packages by itself when `package.json` and a
+lockfile both sit at the plugin root, and the Claude plugin directory holds
+releases like that for review. Ours list development tools only, so the release
+removes both files from `stable`. They stay on `main`, where they power lint,
+tests, and the pinned Claude Code CLI.
+
+## Two rules that keep `main` and `stable` mergeable
+
+1. **Never squash, rebase, or cherry-pick the release PR or the backport PR.**
+   `main` and `stable` must share the exact `release: v{version}` commit. If
+   they do not, the Release workflow refuses to cut the next release.
+   - Backport PR squashed or skipped: open a PR that merges that commit from
+     `stable` into `main`, and merge it with a merge commit.
+   - Release PR squashed or rebased into `stable`: the commit no longer exists
+     on `stable`, so there is no scripted recovery. The two branches have to be
+     reconciled by hand.
+2. **Never merge `stable` into `main`.** `stable` has `package.json` and
+   `package-lock.json` deleted, and that merge deletes them from `main` too.
+
+## If `Release Validation` fails on a release PR
+
+`Release Validation` installs the latest Claude Code CLI, not the version
+pinned in `package.json`, so a new CLI release can fail it for reasons
+unrelated to the release. Fix the problem on `main`, close the release PR,
+delete the `automation/release-v{version}` branch, and run the Release workflow
+again.
 
 ## Tag format
 
