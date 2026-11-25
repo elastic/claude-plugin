@@ -14,12 +14,12 @@
     "@eslint/js": "10.0.1",
     "@jest/globals": "30.5.2",
     "@types/node": "26.6.6",
-    "eslint": "10.14.0",
+    "eslint": "10.15.0",
     "jest": "30.5.2",
     "prettier": "3.10.1",
     "ts-jest": "29.4.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.72.2"
+    "typescript-eslint": "8.73.0"
   },
   "allowScripts": {
     "@anthropic-ai/claude-code": true,
