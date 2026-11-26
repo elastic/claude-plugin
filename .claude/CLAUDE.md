@@ -56,21 +56,29 @@ Assisted-by: Claude Code <noreply@anthropic.com>
 
 ## CI / GitHub Actions
 
-Seven workflows:
+Eight workflows:
 
-1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push/PR to `main` and `stable`, and daily cron.
+1. **CI** (`ci.yml`) — validates the plugin (`claude plugin validate --strict .`), runs lint (`eslint`), and runs tests (`jest`) on push/PR to `main`, and daily cron. It does not run on `stable`.
 2. **Generate skills list** (`generate-skills-list.yml`) — auto-commits an updated `plugin.json` when `skills/` or the script changes.
 3. **Changelog** (`changelog.yml`) — auto-commits a changelog entry from the PR title. Add the `skip-changelog` label to bypass.
 4. **Auto-approve Renovate** (`auto-approve-renovate-prs.yml`) — auto-approves Renovate dependency PRs with the `renovate-auto-approve` label.
-5. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), bumps `plugin.json`, stamps the changelog, and opens a PR targeting `stable` with `skip-changelog`.
+5. **Release** (`release.yml`) — manual `workflow_dispatch`. Takes an explicit semver version string, validates it (semver format, single logical bump, tag doesn't exist), then runs `scripts/cut-release-branch.sh`, which commits the `plugin.json` bump and changelog stamp (`release: vX`), commits the removal of `package.json` and `package-lock.json`, and merges `stable`. It validates and tests that stripped tree with the pinned CLI, then opens a PR targeting `stable` with `skip-changelog`.
 6. **Tag Release** (`release-tag.yml`) — fires on push to `stable` when `plugin.json` changes. Creates the git tag (`{name}--v{version}`) and GitHub Release after the release PR merges.
-7. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR to sync `main` with `stable` so both branches share the same history after a release.
+7. **Backport Release** (`release-backport.yml`) — fires on push to `stable` when `plugin.json` or `CHANGELOG.md` changes. Opens a PR that merges the `release: vX` commit itself into `main`; a maintainer merges it with a merge commit. It does not merge `stable` into `main`.
+8. **Release CI** (`release-ci.yml`) — runs on push/PR to `stable`. Its `Release Validation` job fails if a `package.json` or any lockfile is at the root, then runs `claude plugin validate --strict .` and `claude plugin test .` with the latest (unpinned) CLI.
 
 ## Branching and releases
 
 Development happens on `main`. The `stable` branch is what Claude's plugin system serves to customers — it only advances via release PRs.
 
-Releases are triggered manually via the Release workflow (`Actions` → `Release` → `Run workflow`). Provide the target version (e.g. `0.1.0`). The workflow validates the version, bumps `plugin.json`, stamps the changelog, and opens a PR targeting `stable`. Merging that PR promotes all accumulated `main` changes to customers. The Tag Release workflow then automatically creates the tag and GitHub Release from `stable`. Finally, the Backport Release workflow opens a PR to sync `main` with `stable` so both branches converge after the release.
+`stable` never contains `package.json` or a lockfile. Claude Code installs a plugin's packages when both sit at the plugin root, and the plugin directory holds such releases for review. Ours are dev tooling only, so the release strips them and they stay on `main`.
+
+Releases are triggered manually via the Release workflow (`Actions` → `Release` → `Run workflow`). Provide the target version (e.g. `0.1.0`). The workflow validates the version, bumps `plugin.json`, stamps the changelog, removes `package.json` and `package-lock.json`, and opens a PR targeting `stable`. Merging that PR promotes all accumulated `main` changes to customers. The Tag Release workflow then automatically creates the tag and GitHub Release from `stable`. Finally, the Backport Release workflow opens a PR that brings the `release: vX` commit to `main`.
+
+Two rules keep the branches mergeable:
+
+- Merge the release PR and the backport PR with a **merge commit**. Never squash, rebase, or cherry-pick either: `main` and `stable` must share that exact commit, and `cut-release-branch.sh` refuses the next release if they do not.
+- Never merge `stable` into `main`. That deletes `package.json` and `package-lock.json` from `main`.
 
 Do not manually bump `plugin.json` `version` — the workflow owns that. Do not push directly to `stable` — it should only advance via release PRs. Tag format: `elastic--v{version}`.
 
