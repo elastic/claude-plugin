@@ -6,6 +6,8 @@ All notable changes to this plugin are documented here.
 
 ### Added
 
+- chore: sync agent-skills 0.8.0 (#76)
+  - Skills added: `security/threat-hunting`
 - [Claude Plugin] update README with new telemetry section for opt-out instructions (#67)
 - Added anonymous product usage data collection to help us find issues and improve the plugin. Opt out with `DO_NOT_TRACK=1`, `DISABLE_TELEMETRY=1`, or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (#58)
 - chore: sync agent-skills 0.7.0 (#61)
